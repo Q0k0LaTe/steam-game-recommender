@@ -29,52 +29,15 @@ app.get('/api/profile/:steamId', async (req, res) => {
         
         if (!profileData) {
             return res.status(404).json({ 
-                error: 'Unable to fetch Steam profile. Please check:\n• Steam ID is correct\n• Profile is set to public\n• Steam Community is accessible',
-                suggestions: [
-                    'Make sure your Steam profile is public',
-                    'Try using your full Steam profile URL',
-                    'Check if Steam Community is down',
-                    'Wait a few minutes and try again'
-                ]
+                error: 'Steam profile not found or is private. Please make sure your profile is public.' 
             });
         }
         
         res.json(profileData);
     } catch (error) {
-        console.error('Error fetching Steam profile:', error.message);
-        
-        let errorMessage = 'Failed to fetch Steam profile. ';
-        let suggestions = [];
-        
-        if (error.message.includes('timeout')) {
-            errorMessage += 'Connection timed out.';
-            suggestions = [
-                'Steam Community might be slow or down',
-                'Check your internet connection',
-                'Try again in a few minutes',
-                'Use a VPN if Steam is blocked in your region'
-            ];
-        } else if (error.message.includes('ENOTFOUND') || error.message.includes('ECONNREFUSED')) {
-            errorMessage += 'Cannot connect to Steam.';
-            suggestions = [
-                'Check your internet connection',
-                'Steam Community might be down',
-                'Try using a different network',
-                'Wait and try again later'
-            ];
-        } else {
-            errorMessage += 'Please try again.';
-            suggestions = [
-                'Verify the Steam ID is correct',
-                'Make sure the profile is public',
-                'Try again in a few moments'
-            ];
-        }
-        
+        console.error('Error fetching Steam profile:', error);
         res.status(500).json({ 
-            error: errorMessage,
-            suggestions: suggestions,
-            debug: process.env.NODE_ENV === 'development' ? error.message : undefined
+            error: 'Failed to fetch Steam profile. Please check the Steam ID and try again.' 
         });
     }
 });
@@ -85,64 +48,20 @@ app.get('/api/recommendations/:steamId', async (req, res) => {
         const { steamId } = req.params;
         console.log(`Getting recommendations for Steam ID: ${steamId}`);
         
-        // Add timeout to the entire operation
-        const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Operation timed out after 60 seconds')), 60000);
-        });
-        
-        const dataPromise = Promise.all([
+        const [profileData, recommendations] = await Promise.all([
             steamService.getProfileData(steamId),
             recommendationService.getRecommendations(steamId)
         ]);
         
-        const [profileData, recommendations] = await Promise.race([dataPromise, timeoutPromise]);
-        
         if (!profileData) {
             return res.status(404).json({ 
-                error: 'Unable to fetch Steam profile data',
-                suggestions: [
-                    'Verify your Steam ID is correct',
-                    'Make sure your Steam profile is public',
-                    'Check Steam Community accessibility',
-                    'Try again in a few minutes'
-                ]
+                error: 'Steam profile not found or is private.' 
             });
         }
         
         res.json({
             profile: profileData,
             recommendations: recommendations
-        });
-    } catch (error) {
-        console.error('Error getting recommendations:', error.message);
-        
-        let errorMessage = 'Failed to generate recommendations. ';
-        let suggestions = [];
-        
-        if (error.message.includes('timeout') || error.message.includes('timed out')) {
-            errorMessage += 'The request took too long.';
-            suggestions = [
-                'Steam servers might be slow',
-                'Try a different Steam ID format',
-                'Wait a few minutes and try again',
-                'Check if Steam Community is accessible'
-            ];
-        } else {
-            errorMessage += 'Please try again.';
-            suggestions = [
-                'Make sure the Steam ID is valid',
-                'Ensure your profile is public',
-                'Try again in a moment'
-            ];
-        }
-        
-        res.status(500).json({ 
-            error: errorMessage,
-            suggestions: suggestions,
-            debug: process.env.NODE_ENV === 'development' ? error.message : undefined
-        });
-    }
-}); recommendations
         });
     } catch (error) {
         console.error('Error getting recommendations:', error);
