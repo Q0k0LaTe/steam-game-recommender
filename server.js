@@ -55,7 +55,7 @@ app.get('/api/recommendations/:steamId', async (req, res) => {
                 error: 'Steam profile not found or is private.' 
             });
         }
-
+        
         const recommendations = await recommendationService.getRecommendations(steamId);
         
         // Format the response data
