@@ -43,11 +43,11 @@ app.get('/api/profile/:steamId', async (req, res) => {
     }
 });
 
-// Get game recommendations with vector integration
+// Get game recommendations using vector algorithm
 app.get('/api/recommendations/:steamId', async (req, res) => {
     try {
         const { steamId } = req.params;
-        console.log(`[Recommendations] Getting recommendations for Steam ID: ${steamId}`);
+        console.log(`[API] Getting recommendations for Steam ID: ${steamId}`);
         
         // Get profile data first
         const profileData = await steamService.getProfileData(steamId);
@@ -58,58 +58,15 @@ app.get('/api/recommendations/:steamId', async (req, res) => {
             });
         }
         
-        console.log(`[Recommendations] Profile found for ${profileData.personaName}, generating recommendations...`);
+        console.log(`[API] Profile found for ${profileData.personaName}, running vector algorithm...`);
         
-        // Get recommendations using the enhanced service
+        // This is where we call: print(niu_bi_de_han_shu(userid))
+        // The recommendationService.getRecommendations() will internally call niuBiDeHanShu()
         const recommendations = await recommendationService.getRecommendations(steamId);
         
-        console.log(`[Recommendations] Generated ${recommendations.length} recommendations`);
+        console.log(`[API] Generated ${recommendations.length} recommendations`);
         
-        // Enhanced response formatting with better game data
-        const formattedRecommendations = await Promise.all(
-            recommendations.map(async (game) => {
-                try {
-                    // Try to get more detailed game information
-                    const gameDetails = await getEnhancedGameDetails(game.appId);
-                    
-                    return {
-                        appid: game.appId,
-                        name: game.title,
-                        header_image: gameDetails.header_image || 
-                                    `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.appId}/header.jpg`,
-                        price_overview: gameDetails.price_overview || {
-                            final: parseFloat(game.price?.replace(/[^0-9.]/g, '')) * 100 || 0,
-                            currency: 'USD'
-                        },
-                        score: game.score || game.matchPercentage || 0,
-                        matchPercentage: game.matchPercentage || game.score || 0,
-                        reason: game.reason || 'Recommended for you',
-                        tags: game.tags || gameDetails.genres || [],
-                        genres: game.genres || gameDetails.categories || []
-                    };
-                } catch (detailError) {
-                    console.warn(`[Recommendations] Could not get enhanced details for game ${game.appId}:`, detailError.message);
-                    
-                    // Return basic formatted game data
-                    return {
-                        appid: game.appId,
-                        name: game.title,
-                        header_image: `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.appId}/header.jpg`,
-                        price_overview: {
-                            final: parseFloat(game.price?.replace(/[^0-9.]/g, '')) * 100 || 0,
-                            currency: 'USD'
-                        },
-                        score: game.score || game.matchPercentage || 0,
-                        matchPercentage: game.matchPercentage || game.score || 0,
-                        reason: game.reason || 'Recommended for you',
-                        tags: game.tags || [],
-                        genres: game.genres || []
-                    };
-                }
-            })
-        );
-
-        // Format the complete response
+        // Format response
         const formattedResponse = {
             profile: {
                 personaname: profileData.personaName,
@@ -124,65 +81,52 @@ app.get('/api/recommendations/:steamId', async (req, res) => {
                 location: profileData.location,
                 games: profileData.games
             },
-            recommendations: formattedRecommendations,
+            recommendations: recommendations.map(game => ({
+                appid: game.appId,
+                name: game.title,
+                header_image: `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.appId}/header.jpg`,
+                price_overview: this.parsePriceToOverview(game.price),
+                score: game.score,
+                matchPercentage: game.matchPercentage,
+                reason: game.reason,
+                tags: game.tags,
+                genres: game.genres
+            })),
             metadata: {
-                recommendationType: detectRecommendationType(recommendations),
+                recommendationType: this.detectRecommendationType(recommendations),
                 generatedAt: new Date().toISOString(),
-                totalRecommendations: formattedRecommendations.length
+                totalRecommendations: recommendations.length,
+                vectorAlgorithm: true
             }
         };
 
-        console.log(`[Recommendations] Successfully formatted ${formattedRecommendations.length} recommendations`);
         res.json(formattedResponse);
         
     } catch (error) {
-        console.error('[Recommendations] Error getting recommendations:', error);
+        console.error('[API] Error getting recommendations:', error);
         res.status(500).json({ 
             error: 'Failed to generate recommendations. Please try again.' 
         });
     }
 });
 
-// Helper function to get enhanced game details
-async function getEnhancedGameDetails(appId) {
-    try {
-        const axios = require('axios');
-        
-        // Try Steam Store API first
-        const response = await axios.get(`https://store.steampowered.com/api/appdetails?appids=${appId}&format=json`, {
-            timeout: 8000,
-            headers: {
-                'User-Agent': 'SteamForge Game Recommendation Service'
-            }
-        });
-        
-        const gameData = response.data[appId];
-        if (gameData && gameData.success && gameData.data) {
-            return {
-                header_image: gameData.data.header_image,
-                price_overview: gameData.data.price_overview,
-                genres: gameData.data.genres?.map(g => g.description) || [],
-                categories: gameData.data.categories?.map(c => c.description) || [],
-                short_description: gameData.data.short_description,
-                release_date: gameData.data.release_date
-            };
-        }
-        
-        throw new Error('Steam API returned no data');
-        
-    } catch (apiError) {
-        console.warn(`[GameDetails] Steam API failed for ${appId}, using fallback:`, apiError.message);
-        
-        // Fallback to basic structure
+// Helper function to parse price string back to price_overview format
+function parsePriceToOverview(priceString) {
+    if (!priceString || priceString === 'Free to Play' || priceString === 'Unknown') {
+        return { final: 0, currency: 'USD' };
+    }
+    
+    // Extract price from string like "$29.99"
+    const priceMatch = priceString.match(/[\d.]+/);
+    if (priceMatch) {
+        const price = parseFloat(priceMatch[0]);
         return {
-            header_image: `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/header.jpg`,
-            price_overview: null,
-            genres: [],
-            categories: [],
-            short_description: '',
-            release_date: null
+            final: Math.round(price * 100), // Convert to cents
+            currency: 'USD'
         };
     }
+    
+    return { final: 0, currency: 'USD' };
 }
 
 // Helper function to detect recommendation type
@@ -191,102 +135,92 @@ function detectRecommendationType(recommendations) {
         return 'fallback';
     }
     
-    // Check if any recommendations have vector-based reasons
+    // Check if any recommendations have AI/vector-based reasons
     const hasVectorBased = recommendations.some(rec => 
         rec.reason && (
-            rec.reason.includes('match based on') || 
-            rec.reason.includes('% match') ||
-            rec.matchPercentage > 90
+            rec.reason.includes('🤖') || 
+            rec.reason.includes('AI-powered') ||
+            rec.matchPercentage >= 90
         )
     );
     
-    if (hasVectorBased) {
-        return 'vector-ai';
-    }
-    
-    // Check if recommendations seem personalized
-    const hasPersonalized = recommendations.some(rec => 
-        rec.reason && (
-            rec.reason.includes('Based on your') ||
-            rec.reason.includes('interest in')
-        )
-    );
-    
-    return hasPersonalized ? 'personalized' : 'general';
+    return hasVectorBased ? 'vector-ai' : 'general';
 }
 
-// Health check endpoint
+// Test endpoint to directly test the vector algorithm
+app.get('/api/test-vector/:steamId', async (req, res) => {
+    try {
+        const { steamId } = req.params;
+        console.log(`[Test] Testing vector algorithm for Steam ID: ${steamId}`);
+        
+        // Direct call to the vector algorithm - equivalent to print(niu_bi_de_han_shu(userid))
+        const gameIds = await recommendationService.niuBiDeHanShu(steamId);
+        
+        res.json({
+            steamId: steamId,
+            vectorResults: gameIds,
+            message: `Vector algorithm returned ${gameIds.length} game recommendations`,
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('[Test] Vector algorithm test failed:', error);
+        res.status(500).json({
+            error: 'Vector algorithm test failed',
+            details: error.message,
+            steamId: req.params.steamId
+        });
+    }
+});
+
+// Health check
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'OK', 
         timestamp: new Date().toISOString(),
-        service: 'SteamForge Game Recommender',
+        service: 'SteamForge Game Recommender with Vector AI',
         version: '2.0.0'
     });
 });
 
-// API status endpoint
-app.get('/api/status', async (req, res) => {
+// Status endpoint
+app.get('/api/status', (req, res) => {
     try {
-        // Check if vector data is loaded
-        const vectorStatus = recommendationService.gameVectors ? 'loaded' : 'not_loaded';
-        const achievementStatus = recommendationService.achievementMap ? 'loaded' : 'not_loaded';
+        const fs = require('fs');
+        const path = require('path');
+        
+        // Check if vector data files exist
+        const achievementMapExists = fs.existsSync(path.join(__dirname, 'achievement_cluster_map.json'));
+        const gameVectorExists = fs.existsSync(path.join(__dirname, 'new_game_vector.json'));
         
         res.json({
             status: 'operational',
             components: {
                 steamService: 'operational',
                 recommendationService: 'operational',
-                vectorSystem: vectorStatus,
-                achievementSystem: achievementStatus
+                vectorAlgorithm: achievementMapExists && gameVectorExists ? 'loaded' : 'missing_files'
             },
-            statistics: {
-                gameVectors: recommendationService.gameVectors?.length || 0,
-                achievementMappings: recommendationService.achievementMap ? 
-                    Object.keys(recommendationService.achievementMap).length : 0
+            vectorData: {
+                achievementMap: achievementMapExists ? 'found' : 'missing',
+                gameVectors: gameVectorExists ? 'found' : 'missing'
             },
+            endpoints: [
+                'GET /api/profile/:steamId',
+                'GET /api/recommendations/:steamId', 
+                'GET /api/test-vector/:steamId',
+                'GET /api/health',
+                'GET /api/status'
+            ],
             timestamp: new Date().toISOString()
         });
     } catch (error) {
         res.status(500).json({
-            status: 'degraded',
+            status: 'error',
             error: error.message,
             timestamp: new Date().toISOString()
         });
     }
 });
-
-// Debug endpoint for development
-if (process.env.NODE_ENV === 'development') {
-    app.get('/api/debug/:steamId', async (req, res) => {
-        try {
-            const { steamId } = req.params;
-            
-            console.log(`[Debug] Debug request for Steam ID: ${steamId}`);
-            
-            const profileData = await steamService.getProfileData(steamId);
-            const recommendations = await recommendationService.getRecommendations(steamId);
-            
-            res.json({
-                debug: true,
-                steamId,
-                profile: profileData,
-                recommendations,
-                vectorSystemStatus: {
-                    gameVectors: recommendationService.gameVectors ? 'loaded' : 'not_loaded',
-                    achievementMap: recommendationService.achievementMap ? 'loaded' : 'not_loaded'
-                },
-                timestamp: new Date().toISOString()
-            });
-        } catch (error) {
-            res.status(500).json({
-                debug: true,
-                error: error.message,
-                stack: error.stack
-            });
-        }
-    });
-}
 
 // Error handling middleware
 app.use((error, req, res, next) => {
@@ -305,6 +239,7 @@ app.use((req, res) => {
         availableEndpoints: [
             'GET /api/profile/:steamId',
             'GET /api/recommendations/:steamId',
+            'GET /api/test-vector/:steamId',
             'GET /api/health',
             'GET /api/status'
         ]
@@ -314,11 +249,8 @@ app.use((req, res) => {
 // Start server
 app.listen(PORT, () => {
     console.log(`🎮 SteamForge Game Recommender v2.0 running on http://localhost:${PORT}`);
+    console.log(`🤖 Vector-based AI recommendations enabled`);
     console.log(`📊 API endpoints available at http://localhost:${PORT}/api/`);
-    console.log(`🤖 AI-powered vector recommendations enabled`);
+    console.log(`🧪 Test vector algorithm: http://localhost:${PORT}/api/test-vector/:steamId`);
     console.log(`🔧 Environment: ${process.env.NODE_ENV || 'production'}`);
-    
-    if (process.env.NODE_ENV === 'development') {
-        console.log(`🐛 Debug endpoint: http://localhost:${PORT}/api/debug/:steamId`);
-    }
 });

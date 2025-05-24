@@ -1,10 +1,9 @@
-const steamService = require('./steamService');
 const axios = require('axios');
 const cheerio = require('cheerio');
 const fs = require('fs');
 const path = require('path');
 
-// Vector Algorithm Integration - Direct translation from Python
+// Direct translation from Python
 const NUM_CLUSTER = 78;
 const GAME_ID_LIST = [
     105600, 107410, 211820, 222880, 227300,
@@ -22,7 +21,7 @@ const GAME_ID_LIST = [
 
 class RecommendationService {
     constructor() {
-        // Your existing predefined game database
+        // Fallback game database for when Steam API fails
         this.gameDatabase = [
             {
                 title: "Cyberpunk 2077",
@@ -30,8 +29,6 @@ class RecommendationService {
                 genres: ["RPG", "Action"],
                 score: 87,
                 price: "$39.99",
-                icon: "🌆",
-                gradient: "linear-gradient(135deg, #ff006e 0%, #8338ec 100%)",
                 appId: "1091500"
             },
             {
@@ -40,8 +37,6 @@ class RecommendationService {
                 genres: ["RPG", "Action"],
                 score: 94,
                 price: "$29.99",
-                icon: "⚔️",
-                gradient: "linear-gradient(135deg, #f72585 0%, #4361ee 100%)",
                 appId: "292030"
             },
             {
@@ -50,29 +45,7 @@ class RecommendationService {
                 genres: ["Action", "FPS"],
                 score: 91,
                 price: "Free",
-                icon: "🔫",
-                gradient: "linear-gradient(135deg, #ff9500 0%, #ff5400 100%)",
                 appId: "730"
-            },
-            {
-                title: "Dota 2",
-                tags: ["MOBA", "Strategy", "Multiplayer", "Competitive"],
-                genres: ["Strategy", "MOBA"],
-                score: 89,
-                price: "Free",
-                icon: "🏆",
-                gradient: "linear-gradient(135deg, #7209b7 0%, #2d1b69 100%)",
-                appId: "570"
-            },
-            {
-                title: "Red Dead Redemption 2",
-                tags: ["Western", "Open World", "Action", "Story Rich"],
-                genres: ["Action", "Adventure"],
-                score: 92,
-                price: "$59.99",
-                icon: "🤠",
-                gradient: "linear-gradient(135deg, #d62828 0%, #f77f00 100%)",
-                appId: "1174180"
             },
             {
                 title: "Stardew Valley",
@@ -80,8 +53,6 @@ class RecommendationService {
                 genres: ["Simulation", "Indie"],
                 score: 96,
                 price: "$14.99",
-                icon: "🌾",
-                gradient: "linear-gradient(135deg, #38a3a5 0%, #57cc99 100%)",
                 appId: "413150"
             },
             {
@@ -90,19 +61,7 @@ class RecommendationService {
                 genres: ["RPG", "Action"],
                 score: 95,
                 price: "$49.99",
-                icon: "💍",
-                gradient: "linear-gradient(135deg, #6a4c93 0%, #1a1a2e 100%)",
                 appId: "1245620"
-            },
-            {
-                title: "Half-Life: Alyx",
-                tags: ["VR", "Action", "Sci-Fi", "Story Rich"],
-                genres: ["Action", "VR"],
-                score: 93,
-                price: "$59.99",
-                icon: "🥽",
-                gradient: "linear-gradient(135deg, #ff6b35 0%, #f7931e 100%)",
-                appId: "546560"
             },
             {
                 title: "Portal 2",
@@ -110,19 +69,7 @@ class RecommendationService {
                 genres: ["Puzzle", "Action"],
                 score: 98,
                 price: "$9.99",
-                icon: "🌀",
-                gradient: "linear-gradient(135deg, #4cc9f0 0%, #7209b7 100%)",
                 appId: "620"
-            },
-            {
-                title: "Among Us",
-                tags: ["Multiplayer", "Social Deduction", "Casual", "Indie"],
-                genres: ["Casual", "Indie"],
-                score: 85,
-                price: "$4.99",
-                icon: "👥",
-                gradient: "linear-gradient(135deg, #ff0a54 0%, #ff477e 100%)",
-                appId: "945360"
             },
             {
                 title: "Terraria",
@@ -130,8 +77,6 @@ class RecommendationService {
                 genres: ["Action", "Adventure"],
                 score: 94,
                 price: "$9.99",
-                icon: "🏗️",
-                gradient: "linear-gradient(135deg, #06ffa5 0%, #00d4aa 100%)",
                 appId: "105600"
             },
             {
@@ -140,18 +85,15 @@ class RecommendationService {
                 genres: ["Action", "Indie"],
                 score: 97,
                 price: "$14.99",
-                icon: "🦋",
-                gradient: "linear-gradient(135deg, #560bad 0%, #000000 100%)",
                 appId: "367520"
             }
         ];
     }
 
-    // VECTOR ALGORITHM INTEGRATION - STRICT translation from Python
+    // ===== STRICT PYTHON TRANSLATION =====
 
     /**
-     * Process raw text from Steam achievements page
-     * Direct translation of raw_text_processing function
+     * def raw_text_processing(s: str):
      */
     rawTextProcessing(s) {
         const achievements = [];
@@ -172,7 +114,7 @@ class RecommendationService {
         let i = 1;
 
         while (i < lines.length) {
-            const line = lines[i].strip();
+            const line = lines[i].trim();
 
             // Skip empty lines
             if (!line) {
@@ -184,7 +126,7 @@ class RecommendationService {
                 return null;
             }
 
-            if (i !== lines.length - 1 && lines[i + 1].strip().includes("hidden achievements remaining")) {
+            if (i !== lines.length - 1 && lines[i + 1].trim().includes("hidden achievements remaining")) {
                 return achievements;
             }
 
@@ -194,10 +136,10 @@ class RecommendationService {
 
             if (i + 1 < lines.length) {
                 const potentialName = line;
-                const potentialDescription = lines[i + 1].strip();
+                const potentialDescription = lines[i + 1].trim();
 
                 // Check if next line after description starts with "Unlocked" (unlocked achievement)
-                if (i + 2 < lines.length && lines[i + 2].strip().startsWith("Unlocked")) {
+                if (i + 2 < lines.length && lines[i + 2].trim().startsWith("Unlocked")) {
                     achievements.push({
                         name: potentialName,
                         unlocked: true
@@ -205,14 +147,14 @@ class RecommendationService {
                     i += 3; // Skip name, description, and unlock time
                 }
                 // Check if there's a progress indicator (locked achievement with progress)
-                else if (i + 2 < lines.length && lines[i + 2].strip().includes('/')) {
-                    const progressLine = lines[i + 2].strip();
+                else if (i + 2 < lines.length && lines[i + 2].trim().includes('/')) {
+                    const progressLine = lines[i + 2].trim();
                     // Verify it's a progress indicator (number/number format)
                     if (progressLine.split('/').length - 1 === 1) { // count('/') == 1
                         const parts = progressLine.split('/');
                         if (parts.length === 2 && 
-                            /^\d+$/.test(parts[0].strip()) && 
-                            /^\d+$/.test(parts[1].strip())) {
+                            /^\d+$/.test(parts[0].trim()) && 
+                            /^\d+$/.test(parts[1].trim())) {
                             achievements.push({
                                 name: potentialName,
                                 unlocked: false
@@ -246,8 +188,7 @@ class RecommendationService {
     }
 
     /**
-     * Fetch and process Steam achievements for a specific player and game
-     * Direct translation of get_steam_achievements_text function
+     * def get_steam_achievements_text(player_id: int, game_id: int):
      */
     async getSteamAchievementsText(playerId, gameId) {
         const url = `https://steamcommunity.com/profiles/${playerId}/stats/${gameId}/achievements`;
@@ -263,7 +204,8 @@ class RecommendationService {
             });
 
             // Check for redirect (might indicate private profile or invalid game)
-            if (response.request.res.responseUrl && !response.request.res.responseUrl.includes("achievements")) {
+            if (response.request.res && response.request.res.responseUrl && 
+                !response.request.res.responseUrl.includes("achievements")) {
                 return null;
             }
 
@@ -290,106 +232,116 @@ class RecommendationService {
     }
 
     /**
-     * Process all games for a specific player
-     * Direct translation of kai_hu function - uses PREDEFINED game_id_list
+     * def kai_hu(player_id: int):
      */
     async kaiHu(playerId) {
         const result = [];
-        console.log(`Starting achievement processing for player: ${playerId}`);
+        console.log(`[Vector] Processing ${GAME_ID_LIST.length} games for player ${playerId}`);
 
         for (let i = 0; i < GAME_ID_LIST.length; i++) {
             const gameId = GAME_ID_LIST[i];
-            console.log(`Processing game ${i + 1}/${GAME_ID_LIST.length}: ${gameId}`);
+            console.log(`[Vector] Game ${i + 1}/${GAME_ID_LIST.length}: ${gameId}`);
             
             const achievements = await this.getSteamAchievementsText(playerId, gameId);
             result.push([gameId, achievements]);
+            
+            // Small delay to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 50));
         }
 
         return result;
     }
 
     /**
-     * Generate user vector from achievement data
-     * Direct translation of user_vector_generator function
+     * def user_vector_generator(hu):
      */
     userVectorGenerator(hu) {
-        // Load files exactly like Python
-        let mapData, newGameData;
+        console.log(`[Vector] Generating user vector from ${hu.length} games`);
         
+        // Load data files
+        let mapData, newGameData;
         try {
             const achievementsClusterMapPath = path.join(__dirname, '..', 'achievement_cluster_map.json');
             const newGameVectorPath = path.join(__dirname, '..', 'new_game_vector.json');
             
             mapData = JSON.parse(fs.readFileSync(achievementsClusterMapPath, 'utf8'));
             newGameData = JSON.parse(fs.readFileSync(newGameVectorPath, 'utf8'));
+            
+            console.log(`[Vector] Loaded ${Object.keys(mapData).length} achievement mappings and ${newGameData.length} game vectors`);
         } catch (error) {
-            console.error('Error loading vector data files:', error);
+            console.error('[Vector] Error loading data files:', error);
             throw error;
         }
 
-        // Initialize total_vector exactly like Python: np.zeros(num_cluster)
+        // total_vector = np.zeros(num_cluster)
         const totalVector = new Array(NUM_CLUSTER).fill(0);
+        let totalAchievements = 0;
 
-        // Process each game's achievements
+        // for game_id, temp in hu:
         for (const [gameId, temp] of hu) {
-            // Python: ach_list = ast.literal_eval(str(temp))
-            // In JS, temp is already the processed achievement list
+            if (!temp) continue;
+            
+            // ach_list = ast.literal_eval(str(temp))
             const achList = temp;
             
+            // for entry in ach_list:
             for (const entry of achList) {
                 const achievement = entry.name;
                 const ifDone = entry.unlocked;
                 
-                // Python: if achievement in map_data:
+                // if achievement in map_data:
                 if (achievement in mapData) {
                     const x = mapData[achievement];
-                    
-                    // Python: if ifDone: total_vector[x] += 1 else: total_vector[x] -= 0.2
+                    // if ifDone: total_vector[x] += 1 else: total_vector[x] -= 0.2
                     if (ifDone) {
                         totalVector[x] += 1;
                     } else {
                         totalVector[x] -= 0.2;
                     }
+                    totalAchievements++;
                 }
-                // Python: else: continue
+                // else: continue
             }
         }
 
-        // Python: np_vector = np.array(total_vector)
-        // Python: np_vector = np_vector / np.linalg.norm(np_vector)
+        console.log(`[Vector] Processed ${totalAchievements} achievements`);
+
+        // np_vector = np.array(total_vector)
+        // np_vector = np_vector / np.linalg.norm(np_vector)
         const magnitude = Math.sqrt(totalVector.reduce((sum, val) => sum + val * val, 0));
         const npVector = magnitude > 0 ? totalVector.map(val => val / magnitude) : totalVector;
 
-        // Python: new_game_ranking = []
+        // new_game_ranking = []
         const newGameRanking = [];
         
-        // Python: for entry in new_game_data:
+        // for entry in new_game_data:
         for (const entry of newGameData) {
-            // Python: new_game_vector = np.array(entry['vector'])
+            // new_game_vector = np.array(entry['vector'])
             const newGameVector = entry.vector;
             
-            // Python: score = new_game_vector.dot(np_vector)
+            // score = new_game_vector.dot(np_vector)
             const score = this.dotProduct(newGameVector, npVector);
             
-            // Python: new_game_ranking.append([entry['new_game_id'], score])
+            // new_game_ranking.append([entry['new_game_id'], score])
             newGameRanking.push([entry.new_game_id, score]);
         }
 
-        // Python: new_game_ranking = sorted(new_game_ranking, key=lambda x: x[1], reverse=True)
+        // new_game_ranking = sorted(new_game_ranking, key=lambda x: x[1], reverse=True)
         newGameRanking.sort((a, b) => b[1] - a[1]);
 
-        // Python: result = []
-        // Python: for i in range(8): result.append(new_game_ranking[i][0])
+        // result = []
+        // for i in range(8): result.append(new_game_ranking[i][0])
         const result = [];
         for (let i = 0; i < 8; i++) {
             result.push(newGameRanking[i][0]);
         }
 
+        console.log(`[Vector] Top 8 recommendations:`, result);
         return result;
     }
 
     /**
-     * Calculate dot product of two vectors
+     * Calculate dot product
      */
     dotProduct(vectorA, vectorB) {
         if (vectorA.length !== vectorB.length) {
@@ -405,217 +357,159 @@ class RecommendationService {
     }
 
     /**
-     * Process local achievement data
-     * Direct translation of local_kai_hu function
+     * def local_kai_hu(data):
      */
     localKaiHu(data) {
-        // Python: hu = []
+        // hu = []
         const hu = [];
         
-        // Python: for game_id, content in data:
+        // for game_id, content in data:
         for (const [gameId, content] of data) {
-            // Python: temp = raw_text_processing(content)
+            // temp = raw_text_processing(content)
             const temp = this.rawTextProcessing(content);
             
-            // Python: if temp is not None: hu.append([game_id, temp])
+            // if temp is not None: hu.append([game_id, temp])
             if (temp !== null) {
                 hu.push([gameId, temp]);
             }
         }
         
-        // Python: return user_vector_generator(hu)
+        console.log(`[Vector] Parsed achievements from ${hu.length} games`);
+        
+        // return user_vector_generator(hu)
         return this.userVectorGenerator(hu);
     }
 
     /**
-     * Main function - Direct translation of niu_bi_de_han_shu
-     * Python: def niu_bi_de_han_shu(player_id): return local_kai_hu(kai_hu(player_id))
+     * def niu_bi_de_han_shu(player_id): return local_kai_hu(kai_hu(player_id))
      */
     async niuBiDeHanShu(playerId) {
-        console.log(`Starting vector recommendation for player: ${playerId}`);
+        console.log(`[Vector] Starting recommendation for player: ${playerId}`);
         
         try {
-            // Python: kai_hu(player_id)
+            // kai_hu(player_id)
             const kaiHuResult = await this.kaiHu(playerId);
             
-            // Python: local_kai_hu(kai_hu(player_id))
+            // local_kai_hu(kai_hu(player_id))
             const gameIds = this.localKaiHu(kaiHuResult);
             
-            console.log(`Generated ${gameIds.length} vector-based recommendations:`, gameIds);
-            
-            // Convert game IDs to game objects
-            const recommendations = await this.convertGameIdsToObjects(gameIds);
-            return recommendations;
+            console.log(`[Vector] Generated recommendations: ${gameIds}`);
+            return gameIds;
             
         } catch (error) {
-            console.error('Error in vector recommendation process:', error);
+            console.error('[Vector] Error in recommendation process:', error);
             throw error;
         }
     }
 
+    // ===== CONVERT GAME IDS TO RECOMMENDATION OBJECTS =====
+
     /**
-     * Generate user vector from achievement data
+     * Main entry point - get recommendations for a Steam user
      */
-    userVectorGenerator(hu) {
-        // Load achievement cluster map and game vectors
-        let mapData, newGameData;
-        
+    async getRecommendations(steamId) {
         try {
-            const achievementsClusterMapPath = path.join(__dirname, '..', 'achievement_cluster_map.json');
-            const newGameVectorPath = path.join(__dirname, '..', 'new_game_vector.json');
+            console.log(`[Recommendations] Getting recommendations for Steam ID: ${steamId}`);
             
-            mapData = JSON.parse(fs.readFileSync(achievementsClusterMapPath, 'utf8'));
-            newGameData = JSON.parse(fs.readFileSync(newGameVectorPath, 'utf8'));
-        } catch (error) {
-            console.error('Error loading vector data files:', error);
-            throw error;
-        }
-
-        const totalVector = new Array(NUM_CLUSTER).fill(0);
-
-        for (const [gameId, temp] of hu) {
-            if (!temp) continue;
-            
-            const achList = temp; // temp is already the processed achievement list
-            
-            for (const entry of achList) {
-                const achievement = entry.name;
-                const ifDone = entry.unlocked;
+            // Try vector-based recommendations first
+            try {
+                // This is the equivalent of: print(niu_bi_de_han_shu(userid))
+                const vectorGameIds = await this.niuBiDeHanShu(steamId);
                 
-                if (achievement in mapData) {
-                    const x = mapData[achievement];
-                    if (ifDone) {
-                        totalVector[x] += 1;
-                    } else {
-                        totalVector[x] -= 0.2;
+                if (vectorGameIds && vectorGameIds.length > 0) {
+                    console.log(`[Recommendations] Got ${vectorGameIds.length} vector-based game IDs`);
+                    
+                    // Convert game IDs to recommendation objects
+                    const recommendations = await this.convertGameIdsToRecommendations(vectorGameIds);
+                    
+                    if (recommendations.length > 0) {
+                        console.log(`[Recommendations] Successfully converted to ${recommendations.length} recommendation objects`);
+                        return recommendations;
                     }
                 }
+            } catch (vectorError) {
+                console.warn('[Recommendations] Vector algorithm failed:', vectorError.message);
             }
-        }
-
-        // Normalize vector
-        const magnitude = Math.sqrt(totalVector.reduce((sum, val) => sum + val * val, 0));
-        const npVector = magnitude > 0 ? totalVector.map(val => val / magnitude) : totalVector;
-
-        const newGameRanking = [];
-        
-        for (const entry of newGameData) {
-            const newGameVector = entry.vector;
-            const score = this.dotProduct(newGameVector, npVector);
-            newGameRanking.push([entry.new_game_id, score]);
-        }
-
-        // Sort by score descending
-        newGameRanking.sort((a, b) => b[1] - a[1]);
-
-        const result = [];
-        for (let i = 0; i < Math.min(8, newGameRanking.length); i++) {
-            result.push(newGameRanking[i][0]);
-        }
-
-        return result;
-    }
-
-    /**
-     * Calculate dot product of two vectors
-     */
-    dotProduct(vectorA, vectorB) {
-        if (vectorA.length !== vectorB.length) {
-            return 0;
-        }
-        
-        let result = 0;
-        for (let i = 0; i < vectorA.length; i++) {
-            result += vectorA[i] * vectorB[i];
-        }
-        
-        return result;
-    }
-
-    /**
-     * Process local achievement data
-     */
-    localKaiHu(data) {
-        const hu = [];
-        
-        for (const [gameId, content] of data) {
-            const temp = this.rawTextProcessing(content);
-            if (temp !== null) {
-                hu.push([gameId, temp]);
-            }
-        }
-        
-        return this.userVectorGenerator(hu);
-    }
-
-    /**
-     * Main vector-based recommendation function
-     */
-    async niuBiDeHanShu(playerId) {
-        console.log(`Starting vector recommendation process for player: ${playerId}`);
-        
-        try {
-            const achievementData = await this.kaiHu(playerId);
-            console.log(`Fetched achievement data for ${achievementData.length} games`);
             
-            const gameIds = this.localKaiHu(achievementData);
-            console.log(`Generated ${gameIds.length} vector-based recommendations:`, gameIds);
-            
-            // Convert game IDs to game objects with details
-            const recommendations = await this.convertGameIdsToObjects(gameIds);
-            return recommendations;
+            // Fallback to basic recommendations
+            console.log('[Recommendations] Using fallback recommendations');
+            return this.getFallbackRecommendations();
             
         } catch (error) {
-            console.error('Error in vector recommendation process:', error);
-            throw error;
+            console.error('[Recommendations] Error generating recommendations:', error);
+            return this.getFallbackRecommendations();
         }
     }
 
     /**
-     * Convert game IDs to game objects with Steam data
+     * Convert game IDs from vector algorithm to recommendation objects
      */
-    async convertGameIdsToObjects(gameIds) {
+    async convertGameIdsToRecommendations(gameIds) {
         const recommendations = [];
         
-        for (const gameId of gameIds) {
+        console.log(`[Convert] Converting ${gameIds.length} game IDs to recommendation objects`);
+        
+        for (let i = 0; i < gameIds.length; i++) {
+            const gameId = gameIds[i];
+            
             try {
-                const gameDetails = await this.fetchGameDetails(gameId);
-                recommendations.push({
-                    appId: gameId,
-                    title: gameDetails.name || `Game ${gameId}`,
-                    price: this.formatPrice(gameDetails.price_overview),
-                    score: 95, // High score for vector-based recommendations
-                    matchPercentage: 95,
-                    reason: "AI-powered recommendation based on your gaming preferences",
-                    tags: gameDetails.genres || [],
-                    genres: gameDetails.categories || []
-                });
-            } catch (error) {
-                console.warn(`Could not fetch details for game ${gameId}:`, error.message);
-                // Add basic game info if Steam API fails
+                console.log(`[Convert] Fetching details for game ${i + 1}/${gameIds.length}: ${gameId}`);
+                
+                const gameDetails = await this.fetchGameDetailsFromSteam(gameId);
+                
+                if (gameDetails && gameDetails.name) {
+                    recommendations.push({
+                        appId: gameId,
+                        title: gameDetails.name,
+                        price: this.formatGamePrice(gameDetails.price_overview),
+                        score: 95,
+                        matchPercentage: 95,
+                        reason: "🤖 AI-powered recommendation based on your gaming preferences",
+                        tags: gameDetails.genres || [],
+                        genres: gameDetails.categories || []
+                    });
+                } else {
+                    // Add basic entry if Steam API fails
+                    recommendations.push({
+                        appId: gameId,
+                        title: `Game ${gameId}`,
+                        price: "Unknown",
+                        score: 90,
+                        matchPercentage: 90,
+                        reason: "🤖 AI-powered recommendation",
+                        tags: [],
+                        genres: []
+                    });
+                }
+                
+            } catch (gameError) {
+                console.warn(`[Convert] Failed to get details for game ${gameId}:`, gameError.message);
+                
+                // Still add the game with minimal info
                 recommendations.push({
                     appId: gameId,
                     title: `Game ${gameId}`,
                     price: "Unknown",
-                    score: 90,
-                    matchPercentage: 90,
-                    reason: "AI-powered recommendation",
+                    score: 85,
+                    matchPercentage: 85,
+                    reason: "🤖 AI-powered recommendation",
                     tags: [],
                     genres: []
                 });
             }
         }
         
+        console.log(`[Convert] Successfully converted ${recommendations.length} games`);
         return recommendations;
     }
 
     /**
-     * Fetch game details from Steam API
+     * Fetch game details from Steam Store API
      */
-    async fetchGameDetails(appId) {
+    async fetchGameDetailsFromSteam(appId) {
         try {
             const response = await axios.get(`https://store.steampowered.com/api/appdetails?appids=${appId}&format=json`, {
-                timeout: 5000
+                timeout: 8000
             });
             
             const gameData = response.data[appId];
@@ -623,170 +517,18 @@ class RecommendationService {
                 return gameData.data;
             }
             
-            throw new Error('No game data returned');
+            return null;
+            
         } catch (error) {
-            throw new Error(`Failed to fetch game details: ${error.message}`);
+            console.warn(`[Steam API] Failed to fetch details for game ${appId}:`, error.message);
+            return null;
         }
     }
 
-    // MAIN RECOMMENDATION FUNCTION - Modified to use vector algorithm first
-    async getRecommendations(steamId) {
-        try {
-            console.log(`Getting recommendations for Steam ID: ${steamId}`);
-            
-            // Try vector-based recommendations first
-            try {
-                const vectorRecommendations = await this.niuBiDeHanShu(steamId);
-                if (vectorRecommendations && vectorRecommendations.length > 0) {
-                    console.log(`Successfully generated ${vectorRecommendations.length} vector-based recommendations`);
-                    return vectorRecommendations;
-                }
-            } catch (vectorError) {
-                console.warn('Vector-based recommendations failed:', vectorError.message);
-                console.log('Falling back to profile-based recommendations');
-            }
-            
-            // Fallback to your existing profile-based recommendations
-            const profileData = await steamService.getProfileData(steamId);
-            
-            if (!profileData || !profileData.games) {
-                return this.getFallbackRecommendations();
-            }
-
-            const userGames = profileData.games.list || [];
-            const recommendations = this.generatePersonalizedRecommendations(userGames, profileData);
-            
-            return recommendations;
-        } catch (error) {
-            console.error('Error generating recommendations:', error);
-            return this.getFallbackRecommendations();
-        }
-    }
-
-    // Keep all your existing methods below...
-    
-    generatePersonalizedRecommendations(userGames, profileData) {
-        // Your existing implementation
-        const userPreferences = this.analyzeUserPreferences(userGames);
-        
-        const scoredGames = this.gameDatabase.map(game => {
-            const baseScore = game.score;
-            const preferenceScore = this.calculatePreferenceScore(game, userPreferences);
-            const ownershipPenalty = this.checkOwnership(game, userGames);
-            
-            const finalScore = Math.min(99, Math.max(60, 
-                Math.round(baseScore * 0.6 + preferenceScore * 0.4 - ownershipPenalty)
-            ));
-            
-            return {
-                ...game,
-                score: finalScore,
-                reason: this.generateRecommendationReason(game, userPreferences)
-            };
-        });
-
-        return scoredGames
-            .sort((a, b) => b.score - a.score)
-            .slice(0, 8)
-            .map(game => ({
-                ...game,
-                matchPercentage: game.score
-            }));
-    }
-
-    analyzeUserPreferences(userGames) {
-        // Your existing implementation
-        const preferences = {
-            genres: {},
-            totalHours: 0,
-            avgHoursPerGame: 0,
-            topGames: userGames.slice(0, 5)
-        };
-
-        userGames.forEach(game => {
-            preferences.totalHours += game.hoursPlayed || 0;
-            
-            this.detectGameGenres(game.name).forEach(genre => {
-                preferences.genres[genre] = (preferences.genres[genre] || 0) + (game.hoursPlayed || 1);
-            });
-        });
-
-        preferences.avgHoursPerGame = userGames.length > 0 ? 
-            preferences.totalHours / userGames.length : 0;
-
-        return preferences;
-    }
-
-    detectGameGenres(gameName) {
-        // Your existing implementation
-        const genres = [];
-        const name = gameName.toLowerCase();
-        
-        if (name.includes('counter') || name.includes('cs') || name.includes('call of duty')) {
-            genres.push('FPS');
-        }
-        if (name.includes('dota') || name.includes('league')) {
-            genres.push('MOBA');
-        }
-        if (name.includes('witcher') || name.includes('skyrim') || name.includes('fallout')) {
-            genres.push('RPG');
-        }
-        if (name.includes('civilization') || name.includes('strategy')) {
-            genres.push('Strategy');
-        }
-        if (name.includes('portal') || name.includes('puzzle')) {
-            genres.push('Puzzle');
-        }
-        
-        return genres.length > 0 ? genres : ['Action'];
-    }
-
-    calculatePreferenceScore(game, userPreferences) {
-        // Your existing implementation
-        let score = 50;
-        
-        game.genres.forEach(genre => {
-            if (userPreferences.genres[genre]) {
-                score += Math.min(20, userPreferences.genres[genre] / 10);
-            }
-        });
-
-        game.tags.forEach(tag => {
-            if (userPreferences.genres[tag]) {
-                score += Math.min(10, userPreferences.genres[tag] / 20);
-            }
-        });
-
-        return Math.min(100, score);
-    }
-
-    checkOwnership(game, userGames) {
-        // Your existing implementation
-        const owned = userGames.some(userGame => 
-            userGame.name.toLowerCase().includes(game.title.toLowerCase()) ||
-            game.title.toLowerCase().includes(userGame.name.toLowerCase())
-        );
-        
-        return owned ? 50 : 0;
-    }
-
-    generateRecommendationReason(game, userPreferences) {
-        // Your existing implementation
-        const topGenres = Object.entries(userPreferences.genres)
-            .sort(([,a], [,b]) => b - a)
-            .slice(0, 2)
-            .map(([genre]) => genre);
-
-        const matchingGenres = game.genres.filter(genre => topGenres.includes(genre));
-        
-        if (matchingGenres.length > 0) {
-            return `Based on your interest in ${matchingGenres.join(', ')} games`;
-        }
-        
-        return `Highly rated game similar to your preferences`;
-    }
-
-    formatPrice(priceOverview) {
+    /**
+     * Format game price for display
+     */
+    formatGamePrice(priceOverview) {
         if (!priceOverview || priceOverview.final === 0) {
             return 'Free to Play';
         }
@@ -804,15 +546,22 @@ class RecommendationService {
         }
     }
 
+    /**
+     * Fallback recommendations when vector algorithm fails
+     */
     getFallbackRecommendations() {
-        // Your existing implementation
         return this.gameDatabase
             .sort((a, b) => b.score - a.score)
             .slice(0, 8)
             .map(game => ({
-                ...game,
+                appId: game.appId,
+                title: game.title,
+                price: game.price,
+                score: game.score,
                 matchPercentage: game.score,
-                reason: "Popular and highly rated game"
+                reason: "Popular and highly rated game",
+                tags: game.tags,
+                genres: game.genres
             }));
     }
 }
