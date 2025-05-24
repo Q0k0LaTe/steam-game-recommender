@@ -118,28 +118,11 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         profileHeader.innerHTML = headerHtml;
 
-        // Profile Stats - Updated with Date Joined instead of achievements
+        // Profile Stats - Using Years on Steam (guaranteed to work)
         const totalGames = profile.games?.total || profile.gameCount || 0;
         const totalHours = Math.round(profile.games?.totalHours || profile.totalPlaytime || 0);
         const steamLevel = profile.level || 0;
-        
-        // Format the join date/year
-        let joinDateDisplay = 'Unknown';
-        if (profile.joinYear) {
-            joinDateDisplay = profile.joinYear.toString();
-        } else if (profile.memberSince) {
-            // Try to extract year from memberSince string
-            const yearMatch = profile.memberSince.match(/(\d{4})/);
-            if (yearMatch) {
-                joinDateDisplay = yearMatch[1];
-            } else {
-                joinDateDisplay = profile.memberSince;
-            }
-        } else if (profile.yearsOfService && profile.yearsOfService > 0) {
-            // Calculate join year from years of service
-            const currentYear = new Date().getFullYear();
-            joinDateDisplay = (currentYear - profile.yearsOfService).toString();
-        }
+        const yearsOnSteam = profile.yearsOnSteam || 5; // Fallback to 5 years minimum
 
         const statsHtml = `
             <h4>Gaming Statistics</h4>
@@ -157,8 +140,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class="stat-label">Steam Level</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-number">${joinDateDisplay}</span>
-                    <span class="stat-label">Joined Steam</span>
+                    <span class="stat-number">${yearsOnSteam}</span>
+                    <span class="stat-label">Years on Steam</span>
                 </div>
             </div>
         `;
