@@ -1,4 +1,5 @@
 const axios = require('axios');
+const pythonService = require('./pythonService');
 const vectorAlgorithm = require('./vectorAlgorithm');
 
 class RecommendationService {
@@ -79,18 +80,15 @@ class RecommendationService {
         try {
             console.log(`[Recommendations] Getting recommendations for Steam ID: ${steamId}`);
             
-            // This is the direct equivalent of: print(niu_bi_de_han_shu(User_ID))
-            const vectorGameIds = await vectorAlgorithm.niuBiDeHanShu(steamId);
+            // Get game IDs from Python script
+            const gameIds = await pythonService.executeNiuBiDe(steamId);
+            console.log(`[Recommendations] Python algorithm returned ${gameIds.length} game IDs:`, gameIds);
             
-            if (vectorGameIds && vectorGameIds.length > 0) {
-                console.log(`[Recommendations] Vector algorithm returned ${vectorGameIds.length} game IDs:`, vectorGameIds);
-                
-                // Convert game IDs to recommendation objects for frontend
-                const recommendations = await this.convertGameIdsToRecommendations(vectorGameIds);
-                
-                if (recommendations.length > 0) {
-                    return recommendations;
-                }
+            // Convert game IDs to recommendation objects for frontend
+            const recommendations = await this.convertGameIdsToRecommendations(gameIds);
+            
+            if (recommendations.length > 0) {
+                return recommendations;
             }
             
             // Fallback if vector algorithm fails
