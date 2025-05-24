@@ -332,11 +332,11 @@ body {
 }
 
 .recent-game-icon {
-    width: 64px;
-    height: 64px;
+    width: 120px;
+    height: auto;
     border-radius: 2px;
     flex-shrink: 0;
-    object-fit: cover;
+    object-fit: contain;
 }
 
 .recent-game-info {
