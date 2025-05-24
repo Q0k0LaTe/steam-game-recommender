@@ -48,21 +48,41 @@ app.get('/api/recommendations/:steamId', async (req, res) => {
         const { steamId } = req.params;
         console.log(`Getting recommendations for Steam ID: ${steamId}`);
         
-        const [profileData, recommendations] = await Promise.all([
-            steamService.getProfileData(steamId),
-            recommendationService.getRecommendations(steamId)
-        ]);
+        const profileData = await steamService.getProfileData(steamId);
         
         if (!profileData) {
             return res.status(404).json({ 
                 error: 'Steam profile not found or is private.' 
             });
         }
+
+        const recommendations = await recommendationService.getRecommendations(steamId);
         
-        res.json({
-            profile: profileData,
-            recommendations: recommendations
-        });
+        // Format the response data
+        const formattedResponse = {
+            profile: {
+                personaname: profileData.personaName,
+                avatarUrl: profileData.avatarUrl,
+                gameCount: profileData.games?.total || 0,
+                level: profileData.level || 0,
+                totalPlaytime: Math.round((profileData.games?.totalHours || 0) * 10) / 10,
+                memberSince: profileData.memberSince,
+                realName: profileData.realName,
+                location: profileData.location,
+                games: profileData.games
+            },
+            recommendations: recommendations.map(game => ({
+                appid: game.appId,
+                name: game.title,
+                header_image: `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.appId}/header.jpg`,
+                price_overview: {
+                    final: parseFloat(game.price.replace(/[^0-9.]/g, '')) * 100 || 0,
+                    currency: 'USD'
+                }
+            }))
+        };
+
+        res.json(formattedResponse);
     } catch (error) {
         console.error('Error getting recommendations:', error);
         res.status(500).json({ 

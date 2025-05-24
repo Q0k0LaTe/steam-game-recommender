@@ -558,61 +558,26 @@
             try {
                 console.log(`Requesting recommendations for: ${steamId}`);
                 
-                // Fetch recommendations from backend with longer timeout
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 second timeout
-                
-                const response = await fetch(`/api/recommendations/${encodeURIComponent(steamId)}`, {
-                    signal: controller.signal
-                });
-                
-                clearTimeout(timeoutId);
-                
+                const response = await fetch(`/api/recommendations/${encodeURIComponent(steamId)}`);
                 const data = await response.json();
                 
                 if (!response.ok) {
                     throw new Error(data.error || 'Failed to fetch recommendations');
                 }
                 
+                console.log('Received data:', data); // Debug log
+                
+                if (!data.profile || !data.recommendations) {
+                    throw new Error('Invalid response format from server');
+                }
+                
                 currentSteamId = steamId;
                 displayResults(data.profile, data.recommendations);
-                showSuccess(`Successfully loaded profile for ${data.profile.personaName}`);
+                showSuccess(`Successfully loaded profile for ${data.profile.personaname || 'Unknown Player'}`);
                 
             } catch (error) {
                 console.error('Error:', error);
-                
-                let errorMessage = error.message;
-                let suggestions = [];
-                
-                if (error.name === 'AbortError') {
-                    errorMessage = 'Request timed out. Steam servers might be slow or unreachable.';
-                    suggestions = [
-                        'Steam Community might be experiencing issues',
-                        'Try again in a few minutes',
-                        'Check if Steam is down using a service like downdetector.com',
-                        'Make sure your internet connection is stable'
-                    ];
-                } else if (error.message.includes('Failed to fetch')) {
-                    errorMessage = 'Cannot connect to the server.';
-                    suggestions = [
-                        'Check your internet connection',
-                        'Make sure the server is running',
-                        'Try refreshing the page'
-                    ];
-                } else {
-                    // Try to parse suggestions from server response
-                    try {
-                        const response = await fetch(`/api/recommendations/${encodeURIComponent(steamId)}`);
-                        const errorData = await response.json();
-                        if (errorData.suggestions) {
-                            suggestions = errorData.suggestions;
-                        }
-                    } catch (e) {
-                        // Ignore parsing errors
-                    }
-                }
-                
-                showError(errorMessage, suggestions);
+                showError(error.message || 'An error occurred while fetching recommendations');
             } finally {
                 setLoading(false);
             }
@@ -620,9 +585,9 @@
 
         function displayResults(profile, recommendations) {
             // Update user profile
-            document.getElementById('userName').textContent = profile.personaName || 'Unknown Player';
-            document.getElementById('gamesOwned').textContent = profile.games?.total || 0;
-            document.getElementById('hoursPlayed').textContent = profile.games?.totalHours?.toLocaleString() || '0';
+            document.getElementById('userName').textContent = profile.personaname || 'Unknown Player';
+            document.getElementById('gamesOwned').textContent = profile.gameCount || 0;
+            document.getElementById('hoursPlayed').textContent = profile.totalPlaytime?.toLocaleString() || '0';
             document.getElementById('userLevel').textContent = profile.level || 0;
             document.getElementById('memberSince').textContent = profile.memberSince || '-';
             
@@ -632,7 +597,7 @@
                 avatarEl.src = profile.avatarUrl;
                 avatarEl.style.display = 'block';
             } else {
-                avatarEl.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjMmE0NzVlIi8+Cjx0ZXh0IHg9IjMyIiB5PSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjI0IiBmaWxsPSIjNjZjMGY0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7wn5GEJJ48L3RleHQ+Cjwvc3ZnPg==';
+                avatarEl.style.display = 'none';
             }
             
             // Update additional profile info
@@ -640,36 +605,38 @@
             document.getElementById('location').textContent = profile.location || '';
             
             // Update recent games
+            const recentGamesSection = document.getElementById('recentGamesSection');
+            const recentGamesEl = document.getElementById('recentGamesList');
+            
             if (profile.games?.recentGames && profile.games.recentGames.length > 0) {
-                const recentGamesEl = document.getElementById('recentGamesList');
-                const recentGamesSection = document.getElementById('recentGamesSection');
-                
                 recentGamesEl.innerHTML = profile.games.recentGames.map(game => `
                     <div class="recent-game">
                         ${game.name}
-                        <span class="hours">${game.hoursPlayed.toFixed(1)}h</span>
+                        <span class="hours">${game.hoursPlayed?.toFixed(1) || '0'}h</span>
                     </div>
                 `).join('');
-                
                 recentGamesSection.style.display = 'block';
+            } else {
+                recentGamesSection.style.display = 'none';
             }
             
             // Display game recommendations
             const gamesGrid = document.getElementById('gamesGrid');
+            
+            if (!recommendations || recommendations.length === 0) {
+                gamesGrid.innerHTML = '<p class="error-message">No recommendations available</p>';
+                return;
+            }
+            
             gamesGrid.innerHTML = recommendations.map(game => `
-                <div class="game-capsule" onclick="openSteamStore('${game.appId}', '${game.title}')">
-                    <div class="game-header" style="background: ${game.gradient}">
-                        ${game.icon}
+                <div class="game-capsule" onclick="openSteamStore('${game.appid}', '${game.name}')">
+                    <div class="game-header">
+                        <img src="${game.header_image}" alt="${game.name}" 
+                             onerror="this.src='https://steamstore-a.akamaihd.net/public/images/v6/app_image_capsule.png'">
                     </div>
                     <div class="game-info">
-                        <div class="game-title">${game.title}</div>
-                        <div class="game-tags">
-                            ${game.tags.map(tag => `<span class="game-tag">${tag}</span>`).join('')}
-                        </div>
-                        <div class="game-footer">
-                            <div class="match-score">${game.matchPercentage}% Match</div>
-                            <div class="game-price">${game.price}</div>
-                        </div>
+                        <div class="game-title">${game.name}</div>
+                        <div class="game-price">${formatPrice(game.price_overview)}</div>
                     </div>
                 </div>
             `).join('');
