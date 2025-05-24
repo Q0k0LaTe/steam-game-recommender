@@ -7,12 +7,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultsSection = document.getElementById('resultsSection');
     const gamesGrid = document.getElementById('gamesGrid');
     const profileHeader = document.getElementById('profileHeader');
-    const profileInfo = document.getElementById('profileInfo');
-    const profileBadges = document.getElementById('profileBadges');
     const profileStats = document.getElementById('profileStats');
-    const profileAchievements = document.getElementById('profileAchievements');
     const recentGames = document.getElementById('recentGames');
-    const recentActivity = document.getElementById('recentActivity');
     const errorMessage = document.getElementById('errorMessage');
     const successMessage = document.getElementById('successMessage');
 
@@ -25,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const steamId = steamIdInput.value.trim();
         
         if (!steamId) {
-            showError('Please enter a valid Steam ID');
+            showError('Please enter a valid Steam ID, profile URL, or username');
             return;
         }
 
@@ -43,277 +39,215 @@ document.addEventListener('DOMContentLoaded', () => {
             displayUserProfile(profileData);
             displayRecommendations(recommendationsData.recommendations);
             
-            showSuccess(`Profile loaded successfully! Found ${recommendationsData.recommendations?.length || 0} recommendations.`);
+            const profileName = profileData.personaname || profileData.personaName || 'User';
+            const recCount = recommendationsData.recommendations?.length || 0;
+            showSuccess(`Successfully loaded ${profileName}'s profile! Found ${recCount} personalized recommendations.`);
             showResults();
             
         } catch (error) {
-            console.error('Error:', error);
-            showError(error.message || 'Failed to fetch data. Please check your Steam ID and try again.');
+            console.error('Error fetching Steam data:', error);
+            const errorMsg = error.message || 'Failed to fetch Steam data. Please check your Steam ID and ensure your profile is public.';
+            showError(errorMsg);
             hideLoading();
         }
     }
 
     // Fetch user profile from API
     async function fetchUserProfile(steamId) {
-        const response = await fetch(`/api/profile/${encodeURIComponent(steamId)}`);
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(data.error || 'Failed to fetch profile');
+        try {
+            const response = await fetch(`/api/profile/${encodeURIComponent(steamId)}`);
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || `HTTP ${response.status}: Failed to fetch profile`);
+            }
+            
+            return data;
+        } catch (error) {
+            if (error.name === 'TypeError') {
+                throw new Error('Network error: Unable to connect to server');
+            }
+            throw error;
         }
-        
-        return data;
     }
 
     // Fetch recommendations from API
     async function fetchRecommendations(steamId) {
-        const response = await fetch(`/api/recommendations/${encodeURIComponent(steamId)}`);
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(data.error || 'Failed to fetch recommendations');
+        try {
+            const response = await fetch(`/api/recommendations/${encodeURIComponent(steamId)}`);
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || `HTTP ${response.status}: Failed to fetch recommendations`);
+            }
+            
+            return data;
+        } catch (error) {
+            if (error.name === 'TypeError') {
+                throw new Error('Network error: Unable to connect to server');
+            }
+            throw error;
         }
-        
-        return data;
     }
 
-    // Display comprehensive user profile information
+    // Display user profile information with accurate data
     function displayUserProfile(profile) {
-        // Profile Header
+        // Profile Header - Clean and simple
+        const avatarUrl = profile.avatarUrl || profile.avatarMedium || profile.avatar || 
+                         'https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/fe/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_medium.jpg';
+        
+        const displayName = profile.personaname || profile.personaName || profile.displayName || 'Steam User';
+        const realName = profile.realName || profile.realname || '';
+        const location = profile.location || profile.locCountryCode || '';
+        const memberSince = profile.memberSince || profile.timecreated ? 
+                           new Date(profile.timecreated * 1000).getFullYear() : '';
+
         const headerHtml = `
-            <img src="${profile.avatarUrl || 'https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/fe/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_medium.jpg'}" 
-                 alt="User Avatar" 
-                 class="profile-avatar-large"
+            <img src="${avatarUrl}" 
+                 alt="Steam Avatar" 
+                 class="profile-avatar"
                  onerror="this.src='https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/fe/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_medium.jpg'">
-            <div class="profile-header-info">
-                <h2 class="profile-name">${profile.personaname || 'Steam User'}</h2>
-                ${profile.realName ? `<div class="profile-real-name">${profile.realName}</div>` : ''}
-                ${profile.location ? `<div class="profile-location">📍 ${profile.location}</div>` : ''}
-                <div class="profile-status">Online</div>
-                ${profile.memberSince ? `<div class="profile-location">Member since ${profile.memberSince}</div>` : ''}
-                <div class="profile-level-box">
-                    <span class="profile-level">${profile.level || 0}</span>
-                    <span class="profile-level-text">Steam Level</span>
+            <div class="profile-info">
+                <h3>${displayName}</h3>
+                <div class="profile-details">
+                    ${realName ? `${realName}<br>` : ''}
+                    ${location ? `📍 ${location}<br>` : ''}
+                    ${memberSince ? `Steam member since ${memberSince}` : ''}
                 </div>
             </div>
         `;
         profileHeader.innerHTML = headerHtml;
 
-        // Profile Info
-        const infoHtml = `
-            <div class="profile-box-header">Profile Information</div>
-            <div class="profile-box-content">
-                <div class="profile-info-item">
-                    <span class="profile-info-label">Steam ID:</span>
-                    <span class="profile-info-value">${profile.steamId64 || 'Unknown'}</span>
-                </div>
-                <div class="profile-info-item">
-                    <span class="profile-info-label">Account Status:</span>
-                    <span class="profile-info-value">${profile.privacyState || 'Public'}</span>
-                </div>
-                <div class="profile-info-item">
-                    <span class="profile-info-label">Profile URL:</span>
-                    <span class="profile-info-value">
-                        <a href="${profile.profileUrl || '#'}" target="_blank" style="color: #66c0f4; text-decoration: none;">View Profile</a>
-                    </span>
-                </div>
-                ${profile.summary ? `
-                <div class="profile-info-item" style="flex-direction: column; align-items: flex-start;">
-                    <span class="profile-info-label">Summary:</span>
-                    <span class="profile-info-value" style="margin-top: 4px; font-size: 10px;">${profile.summary}</span>
-                </div>
-                ` : ''}
-            </div>
-        `;
-        profileInfo.innerHTML = infoHtml;
+        // Profile Stats - Only accurate data
+        const totalGames = profile.games?.total || profile.gameCount || 0;
+        const totalHours = Math.round(profile.games?.totalHours || profile.totalPlaytime || 0);
+        const steamLevel = profile.level || 0;
+        const recentGamesCount = profile.games?.recentGames?.length || 
+                                profile.games?.list?.length || 0;
 
-        // Profile Badges
-        const badgesHtml = `
-            <div class="profile-box-header">Badges & Achievements</div>
-            <div class="profile-box-content">
-                <div class="badge-showcase">
-                    <div class="badge-item">
-                        <div class="badge-icon">🏆</div>
-                        <div class="badge-name">Level ${profile.level || 0}</div>
-                    </div>
-                    <div class="badge-item">
-                        <div class="badge-icon">🎮</div>
-                        <div class="badge-name">Gamer</div>
-                    </div>
-                    <div class="badge-item">
-                        <div class="badge-icon">⭐</div>
-                        <div class="badge-name">Collector</div>
-                    </div>
-                    <div class="badge-item">
-                        <div class="badge-icon">🔥</div>
-                        <div class="badge-name">Veteran</div>
-                    </div>
-                </div>
-            </div>
-        `;
-        profileBadges.innerHTML = badgesHtml;
-
-        // Profile Stats
         const statsHtml = `
-            <div class="profile-box-header">Gaming Statistics</div>
-            <div class="profile-box-content">
-                <div class="stats-grid">
-                    <div class="stat-box">
-                        <span class="stat-number">${profile.gameCount || 0}</span>
-                        <span class="stat-label">Games Owned</span>
-                    </div>
-                    <div class="stat-box">
-                        <span class="stat-number">${Math.round(profile.totalPlaytime || 0)}</span>
-                        <span class="stat-label">Hours Played</span>
-                    </div>
-                    <div class="stat-box">
-                        <span class="stat-number">${profile.level || 0}</span>
-                        <span class="stat-label">Steam Level</span>
-                    </div>
-                    <div class="stat-box">
-                        <span class="stat-number">${profile.badges || Math.floor(Math.random() * 50) + 10}</span>
-                        <span class="stat-label">Badges</span>
-                    </div>
-                    <div class="stat-box">
-                        <span class="stat-number">${profile.yearsOfService || Math.floor(Math.random() * 10) + 1}</span>
-                        <span class="stat-label">Years of Service</span>
-                    </div>
-                    <div class="stat-box">
-                        <span class="stat-number">${Math.floor((profile.gameCount || 0) * 0.7)}</span>
-                        <span class="stat-label">Achievements</span>
-                    </div>
+            <h4>Gaming Statistics</h4>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-number">${totalGames.toLocaleString()}</span>
+                    <span class="stat-label">Games Owned</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">${totalHours.toLocaleString()}</span>
+                    <span class="stat-label">Hours Played</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">${steamLevel}</span>
+                    <span class="stat-label">Steam Level</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">${recentGamesCount}</span>
+                    <span class="stat-label">Games Library</span>
                 </div>
             </div>
         `;
         profileStats.innerHTML = statsHtml;
 
-        // Profile Achievements
-        const achievementsHtml = `
-            <div class="profile-box-header">Recent Achievements</div>
-            <div class="profile-box-content">
-                <div class="achievement-showcase">
-                    <div class="achievement-item">
-                        <div class="achievement-icon">🏆</div>
-                        <div class="achievement-info">
-                            <div class="achievement-name">First Victory</div>
-                            <div class="achievement-desc">Won your first match</div>
-                        </div>
-                        <div class="achievement-date">2 days ago</div>
-                    </div>
-                    <div class="achievement-item">
-                        <div class="achievement-icon">⭐</div>
-                        <div class="achievement-info">
-                            <div class="achievement-name">Collector</div>
-                            <div class="achievement-desc">Collected 100 items</div>
-                        </div>
-                        <div class="achievement-date">1 week ago</div>
-                    </div>
-                    <div class="achievement-item">
-                        <div class="achievement-icon">🎯</div>
-                        <div class="achievement-info">
-                            <div class="achievement-name">Sharpshooter</div>
-                            <div class="achievement-desc">Perfect accuracy for 10 shots</div>
-                        </div>
-                        <div class="achievement-date">2 weeks ago</div>
-                    </div>
-                </div>
-            </div>
-        `;
-        profileAchievements.innerHTML = achievementsHtml;
+        // Recent Games - Only show actual data
+        const recentGamesData = profile.games?.recentGames || 
+                               profile.games?.list?.slice(0, 8) || [];
+        
+        let recentGamesHtml = '<h4>Recently Played Games</h4><div class="recent-games-list">';
+        
+        if (recentGamesData.length > 0) {
+            recentGamesHtml += recentGamesData.map(game => {
+                const gameId = game.appId || game.appid || game.id || '';
+                const gameName = game.name || 'Unknown Game';
+                const gameHours = Math.round(game.hoursPlayed || game.hours_played || game.playtime_forever / 60 || 0);
+                const gameIcon = game.logoUrl || game.iconUrl || game.img_logo_url || 
+                               (gameId ? `https://cdn.cloudflare.steamstatic.com/steam/apps/${gameId}/capsule_231x87.jpg` : '');
 
-        // Recent Games
-        const recentGamesData = profile.games?.recentGames || profile.games?.list?.slice(0, 5) || [];
-        const recentGamesHtml = `
-            <div class="profile-box-header">Recently Played Games</div>
-            <div class="profile-box-content">
-                <div class="recent-games-list">
-                    ${recentGamesData.length > 0 ? recentGamesData.map(game => `
-                        <div class="recent-game-item" onclick="openSteamStore('${game.appId}')">
-                            <img src="${game.logoUrl || `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.appId}/capsule_231x87.jpg`}" 
-                                 alt="${game.name}" 
-                                 class="recent-game-icon"
-                                 onerror="this.src='https://steamstore-a.akamaihd.net/public/images/v6/app_image_capsule.png'">
-                            <div class="recent-game-info">
-                                <div class="recent-game-name">${game.name}</div>
-                                <div class="recent-game-hours">${game.hoursPlayed || 0} hours total</div>
-                            </div>
-                            <div class="recent-game-playtime">Last played today</div>
+                return `
+                    <div class="recent-game-item" onclick="openSteamStore('${gameId}')">
+                        <img src="${gameIcon}" 
+                             alt="${gameName}" 
+                             class="recent-game-icon"
+                             onerror="this.src='https://steamstore-a.akamaihd.net/public/images/v6/app_image_capsule.png'">
+                        <div class="recent-game-info">
+                            <div class="recent-game-name">${gameName}</div>
+                            <div class="recent-game-hours">${gameHours.toLocaleString()} hours played</div>
                         </div>
-                    `).join('') : '<div style="color: #8f98a0; text-align: center; padding: 16px; font-size: 11px;">No recent games available</div>'}
+                    </div>
+                `;
+            }).join('');
+        } else {
+            recentGamesHtml += `
+                <div style="color: #8f98a0; text-align: center; padding: 20px; font-size: 12px;">
+                    No recent games data available.<br>
+                    Make sure your Steam profile and game details are set to public.
                 </div>
-            </div>
-        `;
+            `;
+        }
+        
+        recentGamesHtml += '</div>';
         recentGames.innerHTML = recentGamesHtml;
-
-        // Recent Activity
-        const activityHtml = `
-            <div class="profile-box-header">Recent Activity</div>
-            <div class="profile-box-content">
-                <div class="activity-feed">
-                    <div class="activity-item">
-                        <div class="activity-icon"></div>
-                        <div class="activity-text">Unlocked new achievement in ${recentGamesData[0]?.name || 'a game'}</div>
-                        <div class="activity-time">2h ago</div>
-                    </div>
-                    <div class="activity-item">
-                        <div class="activity-icon"></div>
-                        <div class="activity-text">Added ${profile.gameCount ? Math.floor(Math.random() * 3) + 1 : 1} new games to library</div>
-                        <div class="activity-time">1 day ago</div>
-                    </div>
-                    <div class="activity-item">
-                        <div class="activity-icon"></div>
-                        <div class="activity-text">Reached Steam Level ${profile.level || Math.floor(Math.random() * 20) + 1}</div>
-                        <div class="activity-time">3 days ago</div>
-                    </div>
-                    <div class="activity-item">
-                        <div class="activity-icon"></div>
-                        <div class="activity-text">Completed ${Math.floor(Math.random() * 5) + 1} achievements this week</div>
-                        <div class="activity-time">1 week ago</div>
-                    </div>
-                </div>
-            </div>
-        `;
-        recentActivity.innerHTML = activityHtml;
     }
 
     // Display game recommendations
     function displayRecommendations(recommendations) {
         if (!recommendations || !Array.isArray(recommendations) || recommendations.length === 0) {
-            gamesGrid.innerHTML = '<p style="text-align: center; color: #8f98a0; padding: 32px; font-size: 12px;">No recommendations available</p>';
+            gamesGrid.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; color: #8f98a0; padding: 40px; font-size: 14px;">
+                    <p>No personalized recommendations available at the moment.</p>
+                    <p style="margin-top: 8px; font-size: 12px;">This could be due to a private profile or limited game data.</p>
+                </div>
+            `;
             return;
         }
 
-        const html = recommendations.map(game => `
-            <div class="game-capsule" onclick="openSteamStore('${game.appid}')">
-                <div class="game-header">
-                    <img src="${game.header_image || `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.appid}/header.jpg`}" 
-                         alt="${game.name || 'Game'}"
-                         onerror="this.src='https://steamstore-a.akamaihd.net/public/images/v6/app_image_capsule.png'">
+        const html = recommendations.map(game => {
+            const gameId = game.appid || game.appId || game.id || '';
+            const gameName = game.name || game.title || 'Unknown Game';
+            const gameImage = game.header_image || 
+                            (gameId ? `https://cdn.cloudflare.steamstatic.com/steam/apps/${gameId}/header.jpg` : '');
+
+            return `
+                <div class="game-capsule" onclick="openSteamStore('${gameId}')">
+                    <div class="game-header">
+                        <img src="${gameImage}" 
+                             alt="${gameName}"
+                             onerror="this.src='https://steamstore-a.akamaihd.net/public/images/v6/app_image_capsule.png'">
+                    </div>
+                    <div class="game-info">
+                        <div class="game-title">${gameName}</div>
+                        <div class="game-price">${formatPrice(game.price_overview)}</div>
+                    </div>
                 </div>
-                <div class="game-info">
-                    <div class="game-title">${game.name || 'Unknown Game'}</div>
-                    <div class="game-price">${formatPrice(game.price_overview)}</div>
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
 
         gamesGrid.innerHTML = html;
     }
 
     // Format price for display
     function formatPrice(priceOverview) {
-        if (!priceOverview || !priceOverview.final) return 'Free to Play';
+        if (!priceOverview) return 'Free to Play';
         
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: priceOverview.currency || 'USD'
-        }).format(priceOverview.final / 100);
+        if (priceOverview.final === 0) return 'Free to Play';
+        
+        const currency = priceOverview.currency || 'USD';
+        const price = priceOverview.final / 100;
+        
+        try {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: currency
+            }).format(price);
+        } catch (error) {
+            return `$${price.toFixed(2)}`;
+        }
     }
 
     // Open Steam store page in new tab
     function openSteamStore(appId) {
-        if (appId) {
-            window.open(`https://store.steampowered.com/app/${appId}`, '_blank');
+        if (appId && appId !== '') {
+            const url = `https://store.steampowered.com/app/${appId}`;
+            window.open(url, '_blank', 'noopener,noreferrer');
         }
     }
 
@@ -341,6 +275,11 @@ document.addEventListener('DOMContentLoaded', () => {
         errorMessage.textContent = message;
         errorMessage.style.display = 'block';
         successMessage.style.display = 'none';
+        
+        // Auto-hide error after 10 seconds
+        setTimeout(() => {
+            hideMessages();
+        }, 10000);
     }
 
     // Show success message
@@ -348,6 +287,11 @@ document.addEventListener('DOMContentLoaded', () => {
         successMessage.textContent = message;
         successMessage.style.display = 'block';
         errorMessage.style.display = 'none';
+        
+        // Auto-hide success after 5 seconds
+        setTimeout(() => {
+            hideMessages();
+        }, 5000);
     }
 
     // Hide all messages
@@ -363,17 +307,25 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsSection.style.display = 'none';
         steamIdInput.value = '';
         hideMessages();
+        
+        // Clear all profile sections
         gamesGrid.innerHTML = '';
         profileHeader.innerHTML = '';
-        profileInfo.innerHTML = '';
-        profileBadges.innerHTML = '';
         profileStats.innerHTML = '';
-        profileAchievements.innerHTML = '';
         recentGames.innerHTML = '';
-        recentActivity.innerHTML = '';
+        
+        // Focus back on input
         steamIdInput.focus();
     }
 
     // Focus on input when page loads
     steamIdInput.focus();
+
+    // Add Enter key support for better UX
+    steamIdInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            searchForm.dispatchEvent(new Event('submit'));
+        }
+    });
 });
