@@ -230,7 +230,7 @@ function userVectorGenerator(hu) {
     
     const result = [];
     for (let i = 0; i < 8; i++) {
-        result.append(newGameRanking[i][0]);
+        result.push(newGameRanking[i][0]);
     }
     
     return result;
