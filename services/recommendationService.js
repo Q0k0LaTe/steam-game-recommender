@@ -147,10 +147,11 @@ class RecommendationService {
         ];
     }
 
-    // VECTOR ALGORITHM INTEGRATION - Direct translation from Python
+    // VECTOR ALGORITHM INTEGRATION - STRICT translation from Python
 
     /**
      * Process raw text from Steam achievements page
+     * Direct translation of raw_text_processing function
      */
     rawTextProcessing(s) {
         const achievements = [];
@@ -171,7 +172,7 @@ class RecommendationService {
         let i = 1;
 
         while (i < lines.length) {
-            const line = lines[i].trim();
+            const line = lines[i].strip();
 
             // Skip empty lines
             if (!line) {
@@ -183,7 +184,7 @@ class RecommendationService {
                 return null;
             }
 
-            if (i !== lines.length - 1 && lines[i + 1].trim().includes("hidden achievements remaining")) {
+            if (i !== lines.length - 1 && lines[i + 1].strip().includes("hidden achievements remaining")) {
                 return achievements;
             }
 
@@ -193,10 +194,10 @@ class RecommendationService {
 
             if (i + 1 < lines.length) {
                 const potentialName = line;
-                const potentialDescription = lines[i + 1].trim();
+                const potentialDescription = lines[i + 1].strip();
 
                 // Check if next line after description starts with "Unlocked" (unlocked achievement)
-                if (i + 2 < lines.length && lines[i + 2].trim().startsWith("Unlocked")) {
+                if (i + 2 < lines.length && lines[i + 2].strip().startsWith("Unlocked")) {
                     achievements.push({
                         name: potentialName,
                         unlocked: true
@@ -204,14 +205,14 @@ class RecommendationService {
                     i += 3; // Skip name, description, and unlock time
                 }
                 // Check if there's a progress indicator (locked achievement with progress)
-                else if (i + 2 < lines.length && lines[i + 2].trim().includes('/')) {
-                    const progressLine = lines[i + 2].trim();
+                else if (i + 2 < lines.length && lines[i + 2].strip().includes('/')) {
+                    const progressLine = lines[i + 2].strip();
                     // Verify it's a progress indicator (number/number format)
-                    if (progressLine.split('/').length === 2) {
+                    if (progressLine.split('/').length - 1 === 1) { // count('/') == 1
                         const parts = progressLine.split('/');
                         if (parts.length === 2 && 
-                            !isNaN(parseInt(parts[0].trim())) && 
-                            !isNaN(parseInt(parts[1].trim()))) {
+                            /^\d+$/.test(parts[0].strip()) && 
+                            /^\d+$/.test(parts[1].strip())) {
                             achievements.push({
                                 name: potentialName,
                                 unlocked: false
@@ -245,7 +246,8 @@ class RecommendationService {
     }
 
     /**
-     * Fetch Steam achievements text for a specific player and game
+     * Fetch and process Steam achievements for a specific player and game
+     * Direct translation of get_steam_achievements_text function
      */
     async getSteamAchievementsText(playerId, gameId) {
         const url = `https://steamcommunity.com/profiles/${playerId}/stats/${gameId}/achievements`;
@@ -289,10 +291,11 @@ class RecommendationService {
 
     /**
      * Process all games for a specific player
+     * Direct translation of kai_hu function - uses PREDEFINED game_id_list
      */
     async kaiHu(playerId) {
         const result = [];
-        console.log(`Starting achievement data collection for player: ${playerId}`);
+        console.log(`Starting achievement processing for player: ${playerId}`);
 
         for (let i = 0; i < GAME_ID_LIST.length; i++) {
             const gameId = GAME_ID_LIST[i];
@@ -300,12 +303,154 @@ class RecommendationService {
             
             const achievements = await this.getSteamAchievementsText(playerId, gameId);
             result.push([gameId, achievements]);
-            
-            // Add small delay to avoid rate limiting
-            await new Promise(resolve => setTimeout(resolve, 100));
         }
 
         return result;
+    }
+
+    /**
+     * Generate user vector from achievement data
+     * Direct translation of user_vector_generator function
+     */
+    userVectorGenerator(hu) {
+        // Load files exactly like Python
+        let mapData, newGameData;
+        
+        try {
+            const achievementsClusterMapPath = path.join(__dirname, '..', 'achievement_cluster_map.json');
+            const newGameVectorPath = path.join(__dirname, '..', 'new_game_vector.json');
+            
+            mapData = JSON.parse(fs.readFileSync(achievementsClusterMapPath, 'utf8'));
+            newGameData = JSON.parse(fs.readFileSync(newGameVectorPath, 'utf8'));
+        } catch (error) {
+            console.error('Error loading vector data files:', error);
+            throw error;
+        }
+
+        // Initialize total_vector exactly like Python: np.zeros(num_cluster)
+        const totalVector = new Array(NUM_CLUSTER).fill(0);
+
+        // Process each game's achievements
+        for (const [gameId, temp] of hu) {
+            // Python: ach_list = ast.literal_eval(str(temp))
+            // In JS, temp is already the processed achievement list
+            const achList = temp;
+            
+            for (const entry of achList) {
+                const achievement = entry.name;
+                const ifDone = entry.unlocked;
+                
+                // Python: if achievement in map_data:
+                if (achievement in mapData) {
+                    const x = mapData[achievement];
+                    
+                    // Python: if ifDone: total_vector[x] += 1 else: total_vector[x] -= 0.2
+                    if (ifDone) {
+                        totalVector[x] += 1;
+                    } else {
+                        totalVector[x] -= 0.2;
+                    }
+                }
+                // Python: else: continue
+            }
+        }
+
+        // Python: np_vector = np.array(total_vector)
+        // Python: np_vector = np_vector / np.linalg.norm(np_vector)
+        const magnitude = Math.sqrt(totalVector.reduce((sum, val) => sum + val * val, 0));
+        const npVector = magnitude > 0 ? totalVector.map(val => val / magnitude) : totalVector;
+
+        // Python: new_game_ranking = []
+        const newGameRanking = [];
+        
+        // Python: for entry in new_game_data:
+        for (const entry of newGameData) {
+            // Python: new_game_vector = np.array(entry['vector'])
+            const newGameVector = entry.vector;
+            
+            // Python: score = new_game_vector.dot(np_vector)
+            const score = this.dotProduct(newGameVector, npVector);
+            
+            // Python: new_game_ranking.append([entry['new_game_id'], score])
+            newGameRanking.push([entry.new_game_id, score]);
+        }
+
+        // Python: new_game_ranking = sorted(new_game_ranking, key=lambda x: x[1], reverse=True)
+        newGameRanking.sort((a, b) => b[1] - a[1]);
+
+        // Python: result = []
+        // Python: for i in range(8): result.append(new_game_ranking[i][0])
+        const result = [];
+        for (let i = 0; i < 8; i++) {
+            result.push(newGameRanking[i][0]);
+        }
+
+        return result;
+    }
+
+    /**
+     * Calculate dot product of two vectors
+     */
+    dotProduct(vectorA, vectorB) {
+        if (vectorA.length !== vectorB.length) {
+            return 0;
+        }
+        
+        let result = 0;
+        for (let i = 0; i < vectorA.length; i++) {
+            result += vectorA[i] * vectorB[i];
+        }
+        
+        return result;
+    }
+
+    /**
+     * Process local achievement data
+     * Direct translation of local_kai_hu function
+     */
+    localKaiHu(data) {
+        // Python: hu = []
+        const hu = [];
+        
+        // Python: for game_id, content in data:
+        for (const [gameId, content] of data) {
+            // Python: temp = raw_text_processing(content)
+            const temp = this.rawTextProcessing(content);
+            
+            // Python: if temp is not None: hu.append([game_id, temp])
+            if (temp !== null) {
+                hu.push([gameId, temp]);
+            }
+        }
+        
+        // Python: return user_vector_generator(hu)
+        return this.userVectorGenerator(hu);
+    }
+
+    /**
+     * Main function - Direct translation of niu_bi_de_han_shu
+     * Python: def niu_bi_de_han_shu(player_id): return local_kai_hu(kai_hu(player_id))
+     */
+    async niuBiDeHanShu(playerId) {
+        console.log(`Starting vector recommendation for player: ${playerId}`);
+        
+        try {
+            // Python: kai_hu(player_id)
+            const kaiHuResult = await this.kaiHu(playerId);
+            
+            // Python: local_kai_hu(kai_hu(player_id))
+            const gameIds = this.localKaiHu(kaiHuResult);
+            
+            console.log(`Generated ${gameIds.length} vector-based recommendations:`, gameIds);
+            
+            // Convert game IDs to game objects
+            const recommendations = await this.convertGameIdsToObjects(gameIds);
+            return recommendations;
+            
+        } catch (error) {
+            console.error('Error in vector recommendation process:', error);
+            throw error;
+        }
     }
 
     /**
