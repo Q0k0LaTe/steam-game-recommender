@@ -190,10 +190,8 @@ function userVectorGenerator(hu) {
     const totalVector = new Array(NUM_CLUSTER).fill(0);
     
     for (const [gameId, temp] of hu) {
-        if (!temp) continue;
-        
-        // ast.literal_eval(str(temp)) equivalent
-        const achList = temp;
+        // This is equivalent to ast.literal_eval(str(temp))
+        const achList = temp;  // temp is already parsed in JavaScript
         
         for (const entry of achList) {
             const achievement = entry.name;
@@ -206,47 +204,32 @@ function userVectorGenerator(hu) {
                 } else {
                     totalVector[x] -= 0.2;
                 }
-            } else {
-                continue;
             }
         }
     }
     
-    // np_vector = np.array(total_vector)
-    // np_vector = np_vector / np.linalg.norm(np_vector)
+    // Calculate vector magnitude (equivalent to np.linalg.norm)
     const magnitude = Math.sqrt(totalVector.reduce((sum, val) => sum + val * val, 0));
+    
+    // Normalize vector (equivalent to np_vector = np_vector / np.linalg.norm(np_vector))
     const npVector = magnitude > 0 ? totalVector.map(val => val / magnitude) : totalVector;
     
     const newGameRanking = [];
     
     for (const entry of newGameData) {
         const newGameVector = entry.vector;
-        const score = dotProduct(newGameVector, npVector);
+        // Calculate dot product (equivalent to new_game_vector.dot(np_vector))
+        const score = newGameVector.reduce((sum, val, i) => sum + val * npVector[i], 0);
         newGameRanking.push([entry.new_game_id, score]);
     }
     
-    // sorted(new_game_ranking, key=lambda x: x[1], reverse=True)
+    // Sort by score in descending order
     newGameRanking.sort((a, b) => b[1] - a[1]);
     
+    // Get top 8 game IDs
     const result = [];
     for (let i = 0; i < 8; i++) {
         result.push(newGameRanking[i][0]);
-    }
-    
-    return result;
-}
-
-/**
- * Helper function for dot product (numpy equivalent)
- */
-function dotProduct(vectorA, vectorB) {
-    if (vectorA.length !== vectorB.length) {
-        return 0;
-    }
-    
-    let result = 0;
-    for (let i = 0; i < vectorA.length; i++) {
-        result += vectorA[i] * vectorB[i];
     }
     
     return result;
