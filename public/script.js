@@ -11,6 +11,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const recentGames = document.getElementById('recentGames');
     const errorMessage = document.getElementById('errorMessage');
     const successMessage = document.getElementById('successMessage');
+    const loadingText = document.querySelector('.loading-text');
+
+    // Loading animation states
+    const loadingStates = [
+        "Analyzing your Steam profile...",
+        "Fetching your game library...",
+        "Processing achievement data...",
+        "Calculating preference vectors...",
+        "Matching with game database...",
+        "Generating personalized recommendations...",
+        "Almost ready..."
+    ];
+
+    let loadingStateIndex = 0;
+    let loadingInterval;
 
     // Event Listeners
     searchForm.addEventListener('submit', handleFormSubmit);
@@ -27,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         showLoading();
         hideMessages();
+        startLoadingAnimation();
 
         try {
             // Fetch profile and recommendations concurrently
@@ -35,20 +51,66 @@ document.addEventListener('DOMContentLoaded', () => {
                 fetchRecommendations(steamId)
             ]);
 
+            // Stop loading animation
+            stopLoadingAnimation();
+
             // Display results
             displayUserProfile(profileData);
             displayRecommendations(recommendationsData.recommendations);
             
             const profileName = profileData.personaname || profileData.personaName || 'User';
             const recCount = recommendationsData.recommendations?.length || 0;
-            showSuccess(`Successfully loaded ${profileName}'s profile! Found ${recCount} personalized recommendations.`);
+            
+            // Show different success messages based on recommendation type
+            const isVectorBased = recommendationsData.recommendations?.some(rec => 
+                rec.reason && rec.reason.includes('match based on')
+            );
+            
+            if (isVectorBased) {
+                showSuccess(`🎯 Generated ${recCount} AI-powered recommendations for ${profileName} based on advanced preference analysis!`);
+            } else {
+                showSuccess(`✨ Found ${recCount} personalized recommendations for ${profileName}!`);
+            }
+            
             showResults();
             
         } catch (error) {
             console.error('Error fetching Steam data:', error);
+            stopLoadingAnimation();
             const errorMsg = error.message || 'Failed to fetch Steam data. Please check your Steam ID and ensure your profile is public.';
             showError(errorMsg);
             hideLoading();
+        }
+    }
+
+    // Start loading animation with dynamic text
+    function startLoadingAnimation() {
+        loadingStateIndex = 0;
+        updateLoadingText();
+        
+        loadingInterval = setInterval(() => {
+            loadingStateIndex = (loadingStateIndex + 1) % loadingStates.length;
+            updateLoadingText();
+        }, 2000); // Change text every 2 seconds
+    }
+
+    // Stop loading animation
+    function stopLoadingAnimation() {
+        if (loadingInterval) {
+            clearInterval(loadingInterval);
+            loadingInterval = null;
+        }
+    }
+
+    // Update loading text with animation
+    function updateLoadingText() {
+        if (loadingText) {
+            loadingText.style.opacity = '0.5';
+            
+            setTimeout(() => {
+                loadingText.textContent = loadingStates[loadingStateIndex];
+                loadingText.style.opacity = '1';
+            }, 200);
         }
     }
 
@@ -118,11 +180,23 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         profileHeader.innerHTML = headerHtml;
 
-        // Profile Stats - Using Years on Steam (guaranteed to work)
+        // Profile Stats - Enhanced with better calculations
         const totalGames = profile.games?.total || profile.gameCount || 0;
         const totalHours = Math.round(profile.games?.totalHours || profile.totalPlaytime || 0);
         const steamLevel = profile.level || 0;
-        const yearsOnSteam = profile.yearsOnSteam || 5; // Fallback to 5 years minimum
+        
+        // Calculate years on Steam more accurately
+        let yearsOnSteam = profile.yearsOfService || profile.yearsOnSteam || 0;
+        if (!yearsOnSteam && profile.joinYear) {
+            yearsOnSteam = new Date().getFullYear() - profile.joinYear;
+        }
+        if (!yearsOnSteam && profile.memberSince) {
+            const memberYear = parseInt(profile.memberSince.match(/\d{4}/)?.[0]);
+            if (memberYear) {
+                yearsOnSteam = new Date().getFullYear() - memberYear;
+            }
+        }
+        if (!yearsOnSteam) yearsOnSteam = Math.max(1, Math.min(20, Math.floor(totalHours / 1000))); // Fallback estimate
 
         const statsHtml = `
             <h4>Gaming Statistics</h4>
@@ -187,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
         recentGames.innerHTML = recentGamesHtml;
     }
 
-    // Display game recommendations
+    // Display game recommendations with enhanced UI
     function displayRecommendations(recommendations) {
         if (!recommendations || !Array.isArray(recommendations) || recommendations.length === 0) {
             gamesGrid.innerHTML = `
@@ -199,28 +273,44 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const html = recommendations.map(game => {
+        const html = recommendations.map((game, index) => {
             const gameId = game.appid || game.appId || game.id || '';
             const gameName = game.name || game.title || 'Unknown Game';
             const gameImage = game.header_image || 
                             (gameId ? `https://cdn.cloudflare.steamstatic.com/steam/apps/${gameId}/header.jpg` : '');
+            
+            const matchPercentage = game.matchPercentage || game.score || 0;
+            const reason = game.reason || 'Recommended for you';
+            const isVectorBased = reason.includes('match based on');
 
             return `
-                <div class="game-capsule" onclick="openSteamStore('${gameId}')">
+                <div class="game-capsule" onclick="openSteamStore('${gameId}')" style="animation-delay: ${index * 0.1}s">
                     <div class="game-header">
                         <img src="${gameImage}" 
                              alt="${gameName}"
                              onerror="this.src='https://steamstore-a.akamaihd.net/public/images/v6/app_image_capsule.png'">
+                        ${isVectorBased ? '<div class="ai-badge">🤖 AI</div>' : ''}
+                        <div class="match-percentage">${matchPercentage}%</div>
                     </div>
                     <div class="game-info">
                         <div class="game-title">${gameName}</div>
                         <div class="game-price">${formatPrice(game.price_overview)}</div>
+                        <div class="game-reason">${reason}</div>
                     </div>
                 </div>
             `;
         }).join('');
 
         gamesGrid.innerHTML = html;
+        
+        // Trigger animation
+        setTimeout(() => {
+            document.querySelectorAll('.game-capsule').forEach((card, index) => {
+                setTimeout(() => {
+                    card.classList.add('animate-in');
+                }, index * 100);
+            });
+        }, 100);
     }
 
     // Format price for display
@@ -238,7 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 currency: currency
             }).format(price);
         } catch (error) {
-            return `$${price.toFixed(2)}`;
+            return `${price.toFixed(2)}`;
         }
     }
 
@@ -250,11 +340,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Show loading state
+    // Show loading state with enhanced animation
     function showLoading() {
         welcomeSection.style.display = 'none';
         loadingSection.style.display = 'block';
         resultsSection.style.display = 'none';
+        
+        // Add pulsing animation to spinner
+        const spinner = document.querySelector('.steam-spinner');
+        if (spinner) {
+            spinner.style.animation = 'spin 1s linear infinite, pulse 2s ease-in-out infinite alternate';
+        }
     }
 
     // Show results state
@@ -267,6 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Hide loading state
     function hideLoading() {
         loadingSection.style.display = 'none';
+        stopLoadingAnimation();
     }
 
     // Show error message
@@ -306,6 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsSection.style.display = 'none';
         steamIdInput.value = '';
         hideMessages();
+        stopLoadingAnimation();
         
         // Clear all profile sections
         gamesGrid.innerHTML = '';

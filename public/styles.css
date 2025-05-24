@@ -355,25 +355,7 @@ body {
     font-size: 12px;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-    .profile-header {
-        flex-direction: column;
-        text-align: center;
-        padding: 16px;
-    }
-    
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    .profile-stats,
-    .profile-recent-games {
-        padding: 12px 16px;
-    }
-}
-
-/* Games grid */
+/* Games grid with enhanced animations */
 .games-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(292px, 1fr));
@@ -385,13 +367,20 @@ body {
     border-radius: 4px;
     overflow: hidden;
     cursor: pointer;
-    transition: transform 0.1s ease;
+    transition: all 0.2s ease;
     position: relative;
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+.game-capsule.animate-in {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .game-capsule:hover {
-    transform: scale(1.02);
-    box-shadow: 0 0 12px rgba(0, 0, 0, 0.7);
+    transform: scale(1.02) translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.7);
 }
 
 .game-header {
@@ -403,16 +392,53 @@ body {
     width: 100%;
     height: auto;
     display: block;
+    transition: transform 0.2s ease;
+}
+
+.game-capsule:hover .game-header img {
+    transform: scale(1.05);
+}
+
+/* AI Badge for vector-based recommendations */
+.ai-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: linear-gradient(135deg, #ff6b35 0%, #f72585 100%);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    z-index: 2;
+}
+
+/* Match percentage badge */
+.match-percentage {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(102, 192, 244, 0.9);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: bold;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    z-index: 2;
 }
 
 .game-info {
-    padding: 8px;
+    padding: 12px;
 }
 
 .game-title {
     color: #ffffff;
     font-size: 12px;
-    margin-bottom: 2px;
+    margin-bottom: 4px;
     line-height: 14px;
     font-weight: normal;
 }
@@ -421,25 +447,47 @@ body {
     color: #acdbf5;
     font-size: 11px;
     font-weight: bold;
+    margin-bottom: 6px;
 }
 
-/* Loading */
+.game-reason {
+    color: #8f98a0;
+    font-size: 10px;
+    line-height: 12px;
+    font-style: italic;
+}
+
+/* Enhanced Loading with better animations */
 .loading-section {
     display: none;
     text-align: center;
-    padding: 32px;
+    padding: 48px 32px;
     background: rgba(0, 0, 0, 0.2);
     border-radius: 3px;
 }
 
 .steam-spinner {
-    width: 24px;
-    height: 24px;
-    border: 2px solid rgba(102, 192, 244, 0.3);
-    border-top: 2px solid #66c0f4;
+    width: 48px;
+    height: 48px;
+    border: 3px solid rgba(102, 192, 244, 0.3);
+    border-top: 3px solid #66c0f4;
     border-radius: 50%;
     animation: spin 1s linear infinite;
-    margin: 0 auto 12px;
+    margin: 0 auto 24px;
+    position: relative;
+}
+
+.steam-spinner::after {
+    content: '';
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    right: 6px;
+    bottom: 6px;
+    border: 2px solid rgba(255, 107, 53, 0.3);
+    border-top: 2px solid #ff6b35;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite reverse;
 }
 
 @keyframes spin {
@@ -447,18 +495,40 @@ body {
     100% { transform: rotate(360deg); }
 }
 
-.loading-text {
-    color: #8f98a0;
-    font-size: 12px;
+@keyframes pulse {
+    from { 
+        box-shadow: 0 0 20px rgba(102, 192, 244, 0.5);
+    }
+    to { 
+        box-shadow: 0 0 30px rgba(102, 192, 244, 0.8);
+    }
 }
 
-/* Messages */
+.loading-text {
+    color: #c6d4df;
+    font-size: 14px;
+    font-weight: normal;
+    transition: opacity 0.3s ease;
+    min-height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Messages with better styling */
 .message {
-    padding: 8px 12px;
+    padding: 12px 16px;
     border-radius: 3px;
-    margin: 12px 0;
-    font-size: 11px;
+    margin: 16px 0;
+    font-size: 12px;
     display: none;
+    text-align: center;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .error-message {
@@ -478,29 +548,33 @@ body {
     display: none;
 }
 
-/* Enhanced New Search Button - Exact same style as Get Recommendations button */
+/* Enhanced Back Button */
 .back-button {
     background: linear-gradient(to right, #47bfff 5%, #1a44c2 95%);
     border: none;
     border-radius: 2px;
     color: white;
-    padding: 6px 12px;
-    font-size: 10px;
+    padding: 8px 16px;
+    font-size: 11px;
     cursor: pointer;
     text-transform: uppercase;
     text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.3);
-    margin: 16px auto;
+    margin: 24px auto;
     display: block;
     font-family: "Motiva Sans", Arial, Helvetica, sans-serif;
     letter-spacing: 0.5px;
+    transition: all 0.2s ease;
 }
 
 .back-button:hover {
     background: linear-gradient(to right, #66c0f4 5%, #2b58c9 95%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 192, 244, 0.3);
 }
 
 .back-button:active {
     background: linear-gradient(to right, #2b58c9 5%, #66c0f4 95%);
+    transform: translateY(0);
 }
 
 /* Responsive */
@@ -523,13 +597,33 @@ body {
         max-width: none;
     }
     
-    .user-profile {
+    .profile-header {
         flex-direction: column;
         text-align: center;
+        padding: 16px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .profile-stats,
+    .profile-recent-games {
+        padding: 12px 16px;
     }
     
     .games-grid {
         grid-template-columns: 1fr;
+    }
+    
+    .loading-section {
+        padding: 32px 16px;
+    }
+    
+    .steam-spinner {
+        width: 36px;
+        height: 36px;
+        margin-bottom: 20px;
     }
     
     .back-button {
@@ -553,10 +647,14 @@ body {
         padding: 24px 16px;
     }
     
-    .back-button {
-        padding: 8px 16px;
+    .ai-badge {
+        font-size: 9px;
+        padding: 3px 6px;
+    }
+    
+    .match-percentage {
         font-size: 10px;
-        letter-spacing: 1px;
+        padding: 3px 6px;
     }
 }
 
