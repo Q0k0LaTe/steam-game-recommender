@@ -1,6 +1,5 @@
 const axios = require('axios');
 const pythonService = require('./pythonService');
-const vectorAlgorithm = require('./vectorAlgorithm');
 
 class RecommendationService {
     constructor() {
@@ -103,10 +102,9 @@ class RecommendationService {
 
     /**
      * Direct access to the Python algorithm - for testing
-     * This is exactly: niu_bi_de_han_shu(player_id)
      */
     async niuBiDeHanShu(playerId) {
-        return await vectorAlgorithm.niuBiDeHanShu(playerId);
+        return await pythonService.executeNiuBiDe(playerId);
     }
 
     /**

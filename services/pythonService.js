@@ -8,8 +8,8 @@ class PythonService {
 
     async executeNiuBiDe(steamId) {
         return new Promise((resolve, reject) => {
-            // Update the User_ID in the Python script
-            const python = spawn('python3', [this.pythonScript]);
+            // Pass the steamId as an argument to the Python script
+            const python = spawn('python3', [this.pythonScript, steamId.toString()]);
             let dataString = '';
             let errorString = '';
 
