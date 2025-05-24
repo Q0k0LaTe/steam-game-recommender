@@ -118,12 +118,11 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         profileHeader.innerHTML = headerHtml;
 
-        // Profile Stats - Only accurate data
+        // Profile Stats - Updated with achievements instead of game library
         const totalGames = profile.games?.total || profile.gameCount || 0;
         const totalHours = Math.round(profile.games?.totalHours || profile.totalPlaytime || 0);
         const steamLevel = profile.level || 0;
-        const recentGamesCount = profile.games?.recentGames?.length || 
-                                profile.games?.list?.length || 0;
+        const totalAchievements = profile.totalAchievements || 0;
 
         const statsHtml = `
             <h4>Gaming Statistics</h4>
@@ -141,8 +140,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class="stat-label">Steam Level</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-number">${recentGamesCount}</span>
-                    <span class="stat-label">Games Library</span>
+                    <span class="stat-number">${totalAchievements.toLocaleString()}</span>
+                    <span class="stat-label">Achievements</span>
                 </div>
             </div>
         `;

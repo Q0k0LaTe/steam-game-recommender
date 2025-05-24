@@ -143,6 +143,10 @@ class SteamService {
                 return null;
             }
 
+            // Get additional stats (level, achievements, badges)
+            const statsData = await this.getProfileStats(steamId64);
+            profileData = { ...profileData, ...statsData };
+
             // Get games data
             const gamesData = await this.getGamesData(steamId64);
             profileData.games = gamesData;
@@ -174,10 +178,7 @@ class SteamService {
             location: $('location').text() || '',
             memberSince: $('memberSince').text() || '',
             summary: $('summary').text() || '',
-            privacyState: $('privacyState').text() || 'public',
-            level: 0,
-            badges: 0,
-            yearsOfService: 0
+            privacyState: $('privacyState').text() || 'public'
         };
     }
 
@@ -198,19 +199,6 @@ class SteamService {
         const avatarUrl = $('.playerAvatarAutoSizeInner img').attr('src') || '';
         const realName = $('.header_real_name').text().trim() || '';
         const location = $('.header_real_name').next().text().trim() || '';
-        
-        // Extract level
-        const levelText = $('.persona_level .friendPlayerLevelNum').text();
-        const level = levelText ? parseInt(levelText) : 0;
-
-        // Extract badges/achievements count
-        const badgesText = $('.profile_item_links .profile_count_link_total').first().text();
-        const badges = badgesText ? parseInt(badgesText.replace(/,/g, '')) : 0;
-
-        // Extract years of service
-        const yearsText = $('.badge_description').text();
-        const yearsMatch = yearsText.match(/(\d+)\s+years?/);
-        const yearsOfService = yearsMatch ? parseInt(yearsMatch[1]) : 0;
 
         return {
             steamId64: steamId64,
@@ -221,10 +209,7 @@ class SteamService {
             location: location,
             memberSince: '',
             summary: '',
-            privacyState: 'public',
-            level: level,
-            badges: badges,
-            yearsOfService: yearsOfService
+            privacyState: 'public'
         };
     }
 
@@ -252,11 +237,108 @@ class SteamService {
             location: `${player.loccountrycode || ''} ${player.locstatecode || ''}`.trim(),
             memberSince: player.timecreated ? new Date(player.timecreated * 1000).toLocaleDateString() : '',
             summary: '',
-            privacyState: player.communityvisibilitystate === 3 ? 'public' : 'private',
-            level: 0,
-            badges: 0,
-            yearsOfService: 0
+            privacyState: player.communityvisibilitystate === 3 ? 'public' : 'private'
         };
+    }
+
+    async getProfileStats(steamId64) {
+        try {
+            const profileResponse = await this.retryRequest(`${this.baseUrl}/profiles/${steamId64}`);
+            const $ = cheerio.load(profileResponse.data);
+            
+            // Extract Steam level with multiple selectors
+            let level = 0;
+            const levelSelectors = [
+                '.persona_level .friendPlayerLevelNum',
+                '.profile_header_badge_level',
+                '.steam_level .friendPlayerLevelNum',
+                '.profile_header .level'
+            ];
+            
+            for (const selector of levelSelectors) {
+                const levelText = $(selector).text().trim();
+                if (levelText && /^\d+$/.test(levelText)) {
+                    level = parseInt(levelText);
+                    console.log(`Found Steam level: ${level} using selector: ${selector}`);
+                    break;
+                }
+            }
+
+            // If level still not found, try extracting from badge area
+            if (level === 0) {
+                const badgeText = $('.profile_header_badge').text();
+                const levelMatch = badgeText.match(/Level\s+(\d+)/i);
+                if (levelMatch) {
+                    level = parseInt(levelMatch[1]);
+                    console.log(`Found Steam level from badge text: ${level}`);
+                }
+            }
+
+            // Extract total achievements
+            let totalAchievements = 0;
+            const achievementSelectors = [
+                '.profile_achievements .profile_count_link_total',
+                '.achievement_showcase .showcase_stat',
+                '.profile_item_links a[href*="achievements"] .profile_count_link_total'
+            ];
+
+            for (const selector of achievementSelectors) {
+                const achievementText = $(selector).text().trim();
+                const achievementMatch = achievementText.match(/(\d+)/);
+                if (achievementMatch) {
+                    totalAchievements = parseInt(achievementMatch[1]);
+                    console.log(`Found achievements: ${totalAchievements} using selector: ${selector}`);
+                    break;
+                }
+            }
+
+            // Extract perfect games (games with 100% achievements)
+            let perfectGames = 0;
+            const perfectGamesText = $('.profile_perfect_games .profile_count_link_total').text();
+            if (perfectGamesText) {
+                const perfectMatch = perfectGamesText.match(/(\d+)/);
+                if (perfectMatch) {
+                    perfectGames = parseInt(perfectMatch[1]);
+                }
+            }
+
+            // Extract badges count
+            let badges = 0;
+            const badgesText = $('.profile_item_links a[href*="badges"] .profile_count_link_total').first().text();
+            if (badgesText) {
+                const badgeMatch = badgesText.match(/(\d+)/);
+                if (badgeMatch) {
+                    badges = parseInt(badgeMatch[1]);
+                }
+            }
+
+            // Extract years of service
+            let yearsOfService = 0;
+            const serviceText = $('.badge_description').text();
+            const yearsMatch = serviceText.match(/(\d+)\s+years?/i);
+            if (yearsMatch) {
+                yearsOfService = parseInt(yearsMatch[1]);
+            }
+
+            console.log(`Profile stats - Level: ${level}, Achievements: ${totalAchievements}, Perfect Games: ${perfectGames}, Badges: ${badges}`);
+
+            return {
+                level: level,
+                totalAchievements: totalAchievements,
+                perfectGames: perfectGames,
+                badges: badges,
+                yearsOfService: yearsOfService
+            };
+        } catch (error) {
+            console.error('Error fetching profile stats:', error.message);
+            return {
+                level: 0,
+                totalAchievements: 0,
+                perfectGames: 0,
+                badges: 0,
+                yearsOfService: 0
+            };
+        }
     }
 
     async getGamesData(steamId64) {
@@ -346,39 +428,6 @@ class SteamService {
                 list: [],
                 totalHours: 0,
                 recentGames: []
-            };
-        }
-    }
-
-    async getProfileStats(steamId64) {
-        try {
-            const profileResponse = await this.retryRequest(`${this.baseUrl}/profiles/${steamId64}`);
-            const $ = cheerio.load(profileResponse.data);
-            
-            // Extract level
-            const levelText = $('.persona_level .friendPlayerLevelNum').text();
-            const level = levelText ? parseInt(levelText) : 0;
-
-            // Extract badges/achievements count
-            const badgesText = $('.profile_item_links .profile_count_link_total').first().text();
-            const badges = badgesText ? parseInt(badgesText.replace(/,/g, '')) : 0;
-
-            // Extract years of service
-            const yearsText = $('.badge_description').text();
-            const yearsMatch = yearsText.match(/(\d+)\s+years?/);
-            const yearsOfService = yearsMatch ? parseInt(yearsMatch[1]) : 0;
-
-            return {
-                level: level,
-                badges: badges,
-                yearsOfService: yearsOfService
-            };
-        } catch (error) {
-            console.error('Error fetching profile stats:', error.message);
-            return {
-                level: 0,
-                badges: 0,
-                yearsOfService: 0
             };
         }
     }
