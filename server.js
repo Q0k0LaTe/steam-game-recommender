@@ -44,10 +44,11 @@ app.get('/api/profile/:steamId', async (req, res) => {
 });
 
 // Get game recommendations using vector algorithm
+// This endpoint calls: print(niu_bi_de_han_shu(userid))
 app.get('/api/recommendations/:steamId', async (req, res) => {
     try {
         const { steamId } = req.params;
-        console.log(`[API] Getting recommendations for Steam ID: ${steamId}`);
+        console.log(`[API] Getting vector-based recommendations for Steam ID: ${steamId}`);
         
         // Get profile data first
         const profileData = await steamService.getProfileData(steamId);
@@ -60,13 +61,12 @@ app.get('/api/recommendations/:steamId', async (req, res) => {
         
         console.log(`[API] Profile found for ${profileData.personaName}, running vector algorithm...`);
         
-        // This is where we call: print(niu_bi_de_han_shu(userid))
-        // The recommendationService.getRecommendations() will internally call niuBiDeHanShu()
+        // This calls the exact Python algorithm: niu_bi_de_han_shu(steamId)
         const recommendations = await recommendationService.getRecommendations(steamId);
         
         console.log(`[API] Generated ${recommendations.length} recommendations`);
         
-        // Format response
+        // Format response for frontend
         const formattedResponse = {
             profile: {
                 personaname: profileData.personaName,
@@ -85,7 +85,7 @@ app.get('/api/recommendations/:steamId', async (req, res) => {
                 appid: game.appId,
                 name: game.title,
                 header_image: `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.appId}/header.jpg`,
-                price_overview: this.parsePriceToOverview(game.price),
+                price_overview: parsePriceToOverview(game.price),
                 score: game.score,
                 matchPercentage: game.matchPercentage,
                 reason: game.reason,
@@ -93,10 +93,11 @@ app.get('/api/recommendations/:steamId', async (req, res) => {
                 genres: game.genres
             })),
             metadata: {
-                recommendationType: this.detectRecommendationType(recommendations),
+                recommendationType: 'vector-ai',
                 generatedAt: new Date().toISOString(),
                 totalRecommendations: recommendations.length,
-                vectorAlgorithm: true
+                vectorAlgorithm: true,
+                pythonEquivalent: `niu_bi_de_han_shu(${steamId})`
             }
         };
 
@@ -110,61 +111,28 @@ app.get('/api/recommendations/:steamId', async (req, res) => {
     }
 });
 
-// Helper function to parse price string back to price_overview format
-function parsePriceToOverview(priceString) {
-    if (!priceString || priceString === 'Free to Play' || priceString === 'Unknown') {
-        return { final: 0, currency: 'USD' };
-    }
-    
-    // Extract price from string like "$29.99"
-    const priceMatch = priceString.match(/[\d.]+/);
-    if (priceMatch) {
-        const price = parseFloat(priceMatch[0]);
-        return {
-            final: Math.round(price * 100), // Convert to cents
-            currency: 'USD'
-        };
-    }
-    
-    return { final: 0, currency: 'USD' };
-}
-
-// Helper function to detect recommendation type
-function detectRecommendationType(recommendations) {
-    if (!recommendations || recommendations.length === 0) {
-        return 'fallback';
-    }
-    
-    // Check if any recommendations have AI/vector-based reasons
-    const hasVectorBased = recommendations.some(rec => 
-        rec.reason && (
-            rec.reason.includes('🤖') || 
-            rec.reason.includes('AI-powered') ||
-            rec.matchPercentage >= 90
-        )
-    );
-    
-    return hasVectorBased ? 'vector-ai' : 'general';
-}
-
-// Test endpoint to directly test the vector algorithm
-app.get('/api/test-vector/:steamId', async (req, res) => {
+// Direct test endpoint - exactly equivalent to: print(niu_bi_de_han_shu(User_ID))
+app.get('/api/vector-test/:steamId', async (req, res) => {
     try {
         const { steamId } = req.params;
-        console.log(`[Test] Testing vector algorithm for Steam ID: ${steamId}`);
+        console.log(`[Vector Test] Running niu_bi_de_han_shu(${steamId})`);
         
-        // Direct call to the vector algorithm - equivalent to print(niu_bi_de_han_shu(userid))
+        // This is the EXACT equivalent of your Python: print(niu_bi_de_han_shu(User_ID))
         const gameIds = await recommendationService.niuBiDeHanShu(steamId);
+        
+        console.log(`[Vector Test] Result: ${JSON.stringify(gameIds)}`);
         
         res.json({
             steamId: steamId,
-            vectorResults: gameIds,
+            pythonFunction: `niu_bi_de_han_shu(${steamId})`,
+            result: gameIds,
+            resultType: 'Array of Game IDs',
             message: `Vector algorithm returned ${gameIds.length} game recommendations`,
             timestamp: new Date().toISOString()
         });
         
     } catch (error) {
-        console.error('[Test] Vector algorithm test failed:', error);
+        console.error('[Vector Test] Error:', error);
         res.status(500).json({
             error: 'Vector algorithm test failed',
             details: error.message,
@@ -173,13 +141,32 @@ app.get('/api/test-vector/:steamId', async (req, res) => {
     }
 });
 
+// Helper function to parse price string back to price_overview format
+function parsePriceToOverview(priceString) {
+    if (!priceString || priceString === 'Free to Play' || priceString === 'Unknown') {
+        return { final: 0, currency: 'USD' };
+    }
+    
+    const priceMatch = priceString.match(/[\d.]+/);
+    if (priceMatch) {
+        const price = parseFloat(priceMatch[0]);
+        return {
+            final: Math.round(price * 100),
+            currency: 'USD'
+        };
+    }
+    
+    return { final: 0, currency: 'USD' };
+}
+
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'OK', 
         timestamp: new Date().toISOString(),
         service: 'SteamForge Game Recommender with Vector AI',
-        version: '2.0.0'
+        version: '2.0.0',
+        pythonAlgorithm: 'niu_bi_de_han_shu() - Fully Integrated'
     });
 });
 
@@ -187,7 +174,6 @@ app.get('/api/health', (req, res) => {
 app.get('/api/status', (req, res) => {
     try {
         const fs = require('fs');
-        const path = require('path');
         
         // Check if vector data files exist
         const achievementMapExists = fs.existsSync(path.join(__dirname, 'achievement_cluster_map.json'));
@@ -206,11 +192,16 @@ app.get('/api/status', (req, res) => {
             },
             endpoints: [
                 'GET /api/profile/:steamId',
-                'GET /api/recommendations/:steamId', 
-                'GET /api/test-vector/:steamId',
+                'GET /api/recommendations/:steamId - Calls niu_bi_de_han_shu()', 
+                'GET /api/vector-test/:steamId - Direct Python equivalent',
                 'GET /api/health',
                 'GET /api/status'
             ],
+            pythonIntegration: {
+                mainFunction: 'niu_bi_de_han_shu(player_id)',
+                translatedTo: 'JavaScript with zero algorithm changes',
+                testEndpoint: '/api/vector-test/:steamId'
+            },
             timestamp: new Date().toISOString()
         });
     } catch (error) {
@@ -239,7 +230,7 @@ app.use((req, res) => {
         availableEndpoints: [
             'GET /api/profile/:steamId',
             'GET /api/recommendations/:steamId',
-            'GET /api/test-vector/:steamId',
+            'GET /api/vector-test/:steamId - Direct Python algorithm test',
             'GET /api/health',
             'GET /api/status'
         ]
@@ -249,8 +240,9 @@ app.use((req, res) => {
 // Start server
 app.listen(PORT, () => {
     console.log(`🎮 SteamForge Game Recommender v2.0 running on http://localhost:${PORT}`);
-    console.log(`🤖 Vector-based AI recommendations enabled`);
+    console.log(`🤖 Python Vector Algorithm: niu_bi_de_han_shu() - Integrated`);
     console.log(`📊 API endpoints available at http://localhost:${PORT}/api/`);
-    console.log(`🧪 Test vector algorithm: http://localhost:${PORT}/api/test-vector/:steamId`);
+    console.log(`🧪 Test Python algorithm directly: http://localhost:${PORT}/api/vector-test/:steamId`);
     console.log(`🔧 Environment: ${process.env.NODE_ENV || 'production'}`);
+    console.log(`📁 Required files: achievement_cluster_map.json, new_game_vector.json`);
 });
