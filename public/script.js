@@ -37,18 +37,36 @@ document.addEventListener('DOMContentLoaded', () => {
             const recommendationsResponse = await fetch(`/api/recommendations/${steamId}`);
             const recommendationsData = await recommendationsResponse.json();
 
+            console.log('Raw recommendations data:', recommendationsData);
+
             if (recommendationsData.error) {
                 throw new Error(recommendationsData.error);
             }
 
+            // Try to find recommendations array in the response
+            let recommendationsArray;
+            if (Array.isArray(recommendationsData)) {
+                recommendationsArray = recommendationsData;
+            } else if (recommendationsData.recommendations && Array.isArray(recommendationsData.recommendations)) {
+                recommendationsArray = recommendationsData.recommendations;
+            } else if (recommendationsData.games && Array.isArray(recommendationsData.games)) {
+                recommendationsArray = recommendationsData.games;
+            } else {
+                console.error('Could not find recommendations array in:', recommendationsData);
+                throw new Error('Invalid recommendations data format');
+            }
+
+            console.log('Processed recommendations array:', recommendationsArray);
+
             // Display recommendations
-            displayRecommendations(recommendationsData.recommendations || recommendationsData);
+            displayRecommendations(recommendationsArray);
 
             // Show results
             loadingSection.style.display = 'none';
             resultsSection.style.display = 'block';
 
         } catch (error) {
+            console.error('Error in recommendation process:', error);
             loadingSection.style.display = 'none';
             alert(error.message || 'An error occurred while fetching recommendations');
         }
@@ -72,8 +90,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayRecommendations(recommendations) {
+        console.log('Displaying recommendations:', recommendations);
+
+        if (!recommendations) {
+            console.error('Recommendations is null or undefined');
+            gamesGrid.innerHTML = '<p class="error-message">No recommendations available</p>';
+            return;
+        }
+
         if (!Array.isArray(recommendations)) {
-            console.error('Recommendations is not an array:', recommendations);
+            console.error('Recommendations is not an array:', typeof recommendations, recommendations);
             gamesGrid.innerHTML = '<p class="error-message">No recommendations available</p>';
             return;
         }
@@ -83,18 +109,21 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const html = recommendations.map(game => `
-            <div class="game-capsule" onclick="window.open('https://store.steampowered.com/app/${game.appid}', '_blank')">
-                <div class="game-header">
-                    <img src="${game.header_image || ''}" alt="${game.name || 'Game image'}" 
-                         onerror="this.src='https://steamstore-a.akamaihd.net/public/images/v6/app_image_capsule.png'">
+        const html = recommendations.map(game => {
+            console.log('Processing game:', game);
+            return `
+                <div class="game-capsule" onclick="window.open('https://store.steampowered.com/app/${game.appid}', '_blank')">
+                    <div class="game-header">
+                        <img src="${game.header_image || ''}" alt="${game.name || 'Game image'}" 
+                             onerror="this.src='https://steamstore-a.akamaihd.net/public/images/v6/app_image_capsule.png'">
+                    </div>
+                    <div class="game-info">
+                        <div class="game-title">${game.name || 'Unknown Game'}</div>
+                        <div class="game-price">${formatPrice(game.price_overview)}</div>
+                    </div>
                 </div>
-                <div class="game-info">
-                    <div class="game-title">${game.name || 'Unknown Game'}</div>
-                    <div class="game-price">${formatPrice(game.price_overview)}</div>
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
 
         gamesGrid.innerHTML = html;
     }
