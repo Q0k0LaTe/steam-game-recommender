@@ -169,7 +169,8 @@ async function kaiHu(playerId) {
     
     for (let i = 0; i < GAME_ID_LIST.length; i++) {
         const gameId = GAME_ID_LIST[i];
-        const achievements = await getSteamAchievementsText(playerId, gameId);
+        const achievementsText = await getSteamAchievementsText(playerId, gameId);
+        const achievements = rawTextProcessing(achievementsText);
         result.push([gameId, achievements]);
     }
     
@@ -260,9 +261,8 @@ function localKaiHu(data) {
     const hu = [];
     
     for (const [gameId, content] of data) {
-        const temp = rawTextProcessing(content);
-        if (temp !== null) {
-            hu.push([gameId, temp]);
+        if (content !== null) {
+            hu.push([gameId, content]);
         }
     }
     
