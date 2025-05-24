@@ -2,22 +2,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
     const searchForm = document.getElementById('searchForm');
     const steamIdInput = document.getElementById('steamId');
-    const loadingSection = document.getElementById('loading');
-    const resultsSection = document.getElementById('results');
+    const welcomeSection = document.getElementById('welcomeSection');
+    const loadingSection = document.getElementById('loadingSection');
+    const resultsSection = document.getElementById('resultsSection');
     const gamesGrid = document.getElementById('gamesGrid');
-    const userProfileSection = document.getElementById('userProfile');
-    const errorMessageEl = document.getElementById('errorMessage');
-    const successMessageEl = document.getElementById('successMessage');
-    const dynamicContent = document.querySelector('.dynamic-content');
+    const userProfile = document.getElementById('userProfile');
+    const errorMessage = document.getElementById('errorMessage');
+    const successMessage = document.getElementById('successMessage');
 
     // Event Listeners
     searchForm.addEventListener('submit', handleFormSubmit);
-    steamIdInput.addEventListener('keypress', handleEnterKey);
 
-    /**
-     * Handle form submission
-     * @param {Event} e - Form submit event
-     */
+    // Handle form submission
     async function handleFormSubmit(e) {
         e.preventDefault();
         const steamId = steamIdInput.value.trim();
@@ -27,41 +23,31 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Show dynamic content
-        dynamicContent.style.display = 'block';
-        
-        setLoadingState(true);
-        clearResults();
+        showLoading();
+        hideMessages();
 
         try {
-            // Fetch user profile and recommendations
+            // Fetch profile and recommendations concurrently
             const [profileData, recommendationsData] = await Promise.all([
                 fetchUserProfile(steamId),
                 fetchRecommendations(steamId)
             ]);
 
-            // Display the results
+            // Display results
             displayUserProfile(profileData);
             displayRecommendations(recommendationsData.recommendations);
             
-            // Show success message
-            showSuccess(`Successfully loaded profile for ${profileData.personaname || 'Unknown Player'}`);
+            showSuccess(`Profile loaded successfully! Found ${recommendationsData.recommendations?.length || 0} recommendations.`);
+            showResults();
             
-            // Show results section
-            resultsSection.style.display = 'block';
         } catch (error) {
             console.error('Error:', error);
-            showError(error.message);
-        } finally {
-            setLoadingState(false);
+            showError(error.message || 'Failed to fetch data. Please check your Steam ID and try again.');
+            hideLoading();
         }
     }
 
-    /**
-     * Fetch user profile data
-     * @param {string} steamId - Steam ID to fetch profile for
-     * @returns {Promise<Object>} - Profile data
-     */
+    // Fetch user profile from API
     async function fetchUserProfile(steamId) {
         const response = await fetch(`/api/profile/${encodeURIComponent(steamId)}`);
         const data = await response.json();
@@ -73,11 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return data;
     }
 
-    /**
-     * Fetch game recommendations
-     * @param {string} steamId - Steam ID to fetch recommendations for
-     * @returns {Promise<Object>} - Recommendations data
-     */
+    // Fetch recommendations from API
     async function fetchRecommendations(steamId) {
         const response = await fetch(`/api/recommendations/${encodeURIComponent(steamId)}`);
         const data = await response.json();
@@ -89,45 +71,40 @@ document.addEventListener('DOMContentLoaded', () => {
         return data;
     }
 
-    /**
-     * Display user profile information
-     * @param {Object} profile - User profile data
-     */
+    // Display user profile information
     function displayUserProfile(profile) {
         const html = `
             <div class="user-profile">
-                <img src="${profile.avatarUrl || ''}" 
+                <img src="${profile.avatarUrl || 'https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/fe/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_medium.jpg'}" 
                      alt="User Avatar" 
                      class="user-avatar"
-                     onerror="this.style.display='none'">
+                     onerror="this.src='https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/fe/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_medium.jpg'">
                 <div class="user-info">
-                    <h3>${profile.personaname || 'Unknown Player'}</h3>
+                    <h3>${profile.personaname || 'Steam User'}</h3>
                     <div class="user-stats">
                         <span class="stat-item">Games: ${profile.gameCount || 0}</span>
                         <span class="stat-item">Level: ${profile.level || 0}</span>
-                        <span class="stat-item">Hours: ${profile.totalPlaytime || 0}</span>
+                        <span class="stat-item">Hours: ${Math.round(profile.totalPlaytime || 0)}</span>
+                        ${profile.location ? `<span class="stat-item">${profile.location}</span>` : ''}
                     </div>
                 </div>
             </div>
         `;
-        userProfileSection.innerHTML = html;
+        userProfile.innerHTML = html;
     }
 
-    /**
-     * Display game recommendations
-     * @param {Array} recommendations - Array of game recommendations
-     */
+    // Display game recommendations
     function displayRecommendations(recommendations) {
         if (!recommendations || !Array.isArray(recommendations) || recommendations.length === 0) {
-            gamesGrid.innerHTML = '<p class="error-message">No recommendations available</p>';
+            gamesGrid.innerHTML = '<p style="text-align: center; color: #8f98a0; padding: 32px; font-size: 12px;">No recommendations available</p>';
             return;
         }
 
         const html = recommendations.map(game => `
-            <div class="game-capsule" onclick="window.open('https://store.steampowered.com/app/${game.appid}', '_blank')">
+            <div class="game-capsule" onclick="openSteamStore('${game.appid}')">
                 <div class="game-header">
-                    <img src="${game.header_image || ''}" 
-                         alt="${game.name || 'Game image'}" 
+                    <img src="${game.header_image || `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.appid}/header.jpg`}" 
+                         alt="${game.name || 'Game'}"
                          onerror="this.src='https://steamstore-a.akamaihd.net/public/images/v6/app_image_capsule.png'">
                 </div>
                 <div class="game-info">
@@ -140,85 +117,74 @@ document.addEventListener('DOMContentLoaded', () => {
         gamesGrid.innerHTML = html;
     }
 
-    /**
-     * Format price for display
-     * @param {Object} priceOverview - Price data object
-     * @returns {string} - Formatted price string
-     */
+    // Format price for display
     function formatPrice(priceOverview) {
-        if (!priceOverview) return 'Free to Play';
+        if (!priceOverview || !priceOverview.final) return 'Free to Play';
+        
         return new Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: priceOverview.currency || 'USD'
         }).format(priceOverview.final / 100);
     }
 
-    /**
-     * Set loading state
-     * @param {boolean} isLoading - Whether the app is in loading state
-     */
-    function setLoadingState(isLoading) {
-        loadingSection.style.display = isLoading ? 'block' : 'none';
-        steamIdInput.disabled = isLoading;
-        searchForm.querySelector('button[type="submit"]').disabled = isLoading;
+    // Open Steam store page in new tab
+    function openSteamStore(appId) {
+        if (appId) {
+            window.open(`https://store.steampowered.com/app/${appId}`, '_blank');
+        }
     }
 
-    /**
-     * Clear all results and hide dynamic content
-     */
-    function clearResults() {
-        dynamicContent.style.display = 'none';
+    // Show loading state
+    function showLoading() {
+        welcomeSection.style.display = 'none';
+        loadingSection.style.display = 'block';
         resultsSection.style.display = 'none';
-        gamesGrid.innerHTML = '';
-        userProfileSection.innerHTML = '';
+    }
+
+    // Show results state
+    function showResults() {
+        welcomeSection.style.display = 'none';
+        loadingSection.style.display = 'none';
+        resultsSection.style.display = 'block';
+    }
+
+    // Hide loading state
+    function hideLoading() {
+        loadingSection.style.display = 'none';
+    }
+
+    // Show error message
+    function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.style.display = 'block';
+        successMessage.style.display = 'none';
+    }
+
+    // Show success message
+    function showSuccess(message) {
+        successMessage.textContent = message;
+        successMessage.style.display = 'block';
+        errorMessage.style.display = 'none';
+    }
+
+    // Hide all messages
+    function hideMessages() {
+        errorMessage.style.display = 'none';
+        successMessage.style.display = 'none';
+    }
+
+    // Reset app to initial state (global function for onclick)
+    window.resetApp = function() {
+        welcomeSection.style.display = 'block';
+        loadingSection.style.display = 'none';
+        resultsSection.style.display = 'none';
         steamIdInput.value = '';
-        hideError();
-        hideSuccess();
+        hideMessages();
+        gamesGrid.innerHTML = '';
+        userProfile.innerHTML = '';
         steamIdInput.focus();
     }
 
-    /**
-     * Show error message
-     * @param {string} message - Error message to display
-     */
-    function showError(message) {
-        errorMessageEl.textContent = message;
-        errorMessageEl.style.display = 'block';
-        hideSuccess();
-    }
-
-    /**
-     * Hide error message
-     */
-    function hideError() {
-        errorMessageEl.style.display = 'none';
-    }
-
-    /**
-     * Show success message
-     * @param {string} message - Success message to display
-     */
-    function showSuccess(message) {
-        successMessageEl.textContent = message;
-        successMessageEl.style.display = 'block';
-        hideError();
-    }
-
-    /**
-     * Hide success message
-     */
-    function hideSuccess() {
-        successMessageEl.style.display = 'none';
-    }
-
-    /**
-     * Handle enter key press
-     * @param {KeyboardEvent} e - Keyboard event
-     */
-    function handleEnterKey(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            handleFormSubmit(e);
-        }
-    }
+    // Focus on input when page loads
+    steamIdInput.focus();
 });

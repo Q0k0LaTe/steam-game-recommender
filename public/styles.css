@@ -9,303 +9,320 @@ body {
     font-family: "Motiva Sans", Arial, Helvetica, sans-serif;
     background: #1b2838;
     color: #c6d4df;
-    min-height: 100vh;
-    font-size: 14px;
+    font-size: 12px;
+    line-height: 16px;
 }
 
-/* Header styles */
-.steam-header {
-    background: #171a21;
-    padding: 0;
-    position: fixed;
-    width: 100%;
-    top: 0;
-    z-index: 100;
-    box-shadow: 0 0 7px 0 rgba(0, 0, 0, 0.75);
-}
-
-.steam-nav {
+/* Main container */
+.main-container {
     max-width: 940px;
     margin: 0 auto;
-    display: flex;
-    align-items: center;
-    padding: 0;
-    height: 54px;
+    padding: 0 16px;
+    min-height: 100vh;
 }
 
-.steam-logo {
-    background: linear-gradient(90deg, #06bfff 0%, #2d73ff 100%);
-    color: #fff;
-    font-weight: bold;
-    padding: 0 15px;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    font-size: 20px;
-    letter-spacing: 2px;
-    text-shadow: 0 0 3px rgba(0, 0, 0, 0.3);
+/* SteamForge Header */
+.steamforge-header {
+    text-align: center;
+    padding: 48px 0 40px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.3);
+    margin-bottom: 24px;
 }
 
-.nav-links {
-    display: flex;
-    height: 100%;
-    margin-left: 20px;
-}
-
-.nav-item {
-    color: #b8b6b4;
-    text-decoration: none;
-    padding: 0 15px;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    font-size: 14px;
-    transition: color 0.2s ease;
-    position: relative;
-}
-
-.nav-item:hover {
-    color: #fff;
-}
-
-.nav-item.active {
-    color: #fff;
-    background: linear-gradient(to bottom, rgba(35, 155, 219, 0.2) 0%, rgba(35, 155, 219, 0) 100%);
-}
-
-.nav-item.active::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: #66c0f4;
-}
-
-/* Main content */
-.main-content {
-    margin-top: 54px;
-    padding: 0;
-    max-width: 940px;
-    margin-left: auto;
-    margin-right: auto;
-    min-height: calc(100vh - 54px);
+.logo-container {
     display: flex;
     flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.steamforge-logo {
+    font-size: 56px;
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.logo-steam {
+    color: #66c0f4;
+    text-shadow: 
+        0 0 10px rgba(102, 192, 244, 0.8),
+        0 0 20px rgba(102, 192, 244, 0.6),
+        0 0 30px rgba(102, 192, 244, 0.4);
+    animation: pulse-blue 2s ease-in-out infinite alternate;
+}
+
+.logo-forge {
+    color: #ff6b35;
+    text-shadow: 
+        0 0 10px rgba(255, 107, 53, 0.8),
+        0 0 20px rgba(255, 107, 53, 0.6),
+        0 0 30px rgba(255, 107, 53, 0.4);
+    animation: pulse-orange 2s ease-in-out infinite alternate;
+}
+
+@keyframes pulse-blue {
+    from { 
+        text-shadow: 
+            0 0 5px rgba(102, 192, 244, 0.6),
+            0 0 10px rgba(102, 192, 244, 0.4),
+            0 0 15px rgba(102, 192, 244, 0.3);
+    }
+    to { 
+        text-shadow: 
+            0 0 10px rgba(102, 192, 244, 0.8),
+            0 0 20px rgba(102, 192, 244, 0.6),
+            0 0 30px rgba(102, 192, 244, 0.4);
+    }
+}
+
+@keyframes pulse-orange {
+    from { 
+        text-shadow: 
+            0 0 5px rgba(255, 107, 53, 0.6),
+            0 0 10px rgba(255, 107, 53, 0.4),
+            0 0 15px rgba(255, 107, 53, 0.3);
+    }
+    to { 
+        text-shadow: 
+            0 0 10px rgba(255, 107, 53, 0.8),
+            0 0 20px rgba(255, 107, 53, 0.6),
+            0 0 30px rgba(255, 107, 53, 0.4);
+    }
+}
+
+.logo-separator {
+    width: 200px;
+    height: 2px;
+    background: linear-gradient(to right, #66c0f4, #ff6b35);
+    border-radius: 1px;
+    box-shadow: 0 0 10px rgba(102, 192, 244, 0.5);
+}
+
+.steamforge-tagline {
+    color: #8f98a0;
+    font-size: 14px;
+    font-weight: normal;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-top: 8px;
 }
 
 /* Welcome section */
 .welcome-section {
-    margin: 0;
-    padding: 40px 20px;
-    background: transparent;
-    box-shadow: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: calc(100vh - 54px);
-}
-
-.welcome-content {
     background: rgba(0, 0, 0, 0.2);
-    padding: 40px;
-    border-radius: 4px;
-    max-width: 600px;
-    width: 100%;
+    border-radius: 3px;
+    padding: 32px 24px;
     text-align: center;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-}
-
-.welcome-content h1 {
-    color: #ffffff;
-    font-size: 36px;
-    margin-bottom: 16px;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-    font-weight: 300;
-}
-
-.welcome-text {
-    color: #66c0f4;
-    font-size: 18px;
-    margin-bottom: 32px;
-    line-height: 1.5;
-}
-
-/* Form elements */
-.steam-input-group {
-    display: flex;
-    gap: 16px;
     margin-bottom: 24px;
-    align-items: center;
-    width: 100%;
-    max-width: 500px;
-    margin-left: auto;
-    margin-right: auto;
 }
 
-.steam-input {
-    background-color: rgba(0, 0, 0, 0.2);
+.welcome-title {
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: normal;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.welcome-subtitle {
+    color: #8f98a0;
+    font-size: 12px;
+    margin-bottom: 24px;
+    line-height: 16px;
+}
+
+/* Search form */
+.search-form {
+    display: flex;
+    gap: 8px;
+    max-width: 400px;
+    margin: 0 auto 16px;
+}
+
+.search-input {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.2);
     border: 1px solid #000000;
     border-radius: 3px;
-    color: #fff;
-    padding: 12px 16px;
-    width: 100%;
-    font-size: 14px;
-    flex: 1;
-    transition: all 0.2s ease;
+    color: #c6d4df;
+    padding: 6px 8px;
+    font-size: 11px;
+    font-family: "Motiva Sans", Arial, Helvetica, sans-serif;
 }
 
-.steam-input:focus {
+.search-input::placeholder {
+    color: #8f98a0;
+}
+
+.search-input:focus {
     outline: none;
     border-color: #66c0f4;
-    box-shadow: 0 0 10px rgba(102, 192, 244, 0.3);
-    background-color: rgba(102, 192, 244, 0.1);
+    box-shadow: 0 0 3px rgba(102, 192, 244, 0.5);
+    background: rgba(102, 192, 244, 0.1);
 }
 
-.steam-button {
-    border-radius: 2px;
-    border: none;
-    padding: 12px 24px;
-    font-size: 15px;
-    cursor: pointer;
+.search-button {
     background: linear-gradient(to right, #47bfff 5%, #1a44c2 95%);
+    border: none;
+    border-radius: 2px;
     color: white;
+    padding: 6px 12px;
+    font-size: 10px;
+    cursor: pointer;
+    text-transform: uppercase;
     text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.3);
-    white-space: nowrap;
-    min-width: 180px;
-    transition: all 0.2s ease;
+    font-family: "Motiva Sans", Arial, Helvetica, sans-serif;
+    letter-spacing: 0.5px;
 }
 
-.steam-button:hover {
+.search-button:hover {
     background: linear-gradient(to right, #66c0f4 5%, #2b58c9 95%);
-    transform: translateY(-1px);
 }
 
-.steam-button:active {
+.search-button:active {
     background: linear-gradient(to right, #2b58c9 5%, #66c0f4 95%);
-    transform: translateY(1px);
-}
-
-.steam-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-}
-
-.steam-button.secondary {
-    background: linear-gradient(to right, #4c6b22 5%, #87b145 95%);
-    margin-top: 20px;
-}
-
-.steam-button.secondary:hover {
-    background: linear-gradient(to right, #87b145 5%, #4c6b22 95%);
 }
 
 .input-help {
     color: #8f98a0;
-    font-size: 12px;
-    line-height: 1.5;
-    max-width: 500px;
-    margin: 0 auto;
+    font-size: 10px;
+    line-height: 14px;
 }
 
-/* Dynamic content */
-.dynamic-content {
-    width: 100%;
-    padding: 20px;
-}
-
-/* Navigation */
-.store-nav {
-    background: linear-gradient(90deg, #2a475e 0%, #1b2838 100%);
+/* Content sections */
+.content-section {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
     margin-bottom: 16px;
-    box-shadow: 0 0 3px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+}
+
+.section-header {
+    background: linear-gradient(90deg, rgba(42, 71, 94, 0.7) 0%, rgba(23, 26, 33, 0.7) 100%);
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: normal;
+    padding: 8px 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.section-content {
+    padding: 16px;
+}
+
+/* User profile */
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 12px;
+    border-radius: 3px;
+    margin-bottom: 16px;
+}
+
+.user-avatar {
+    width: 48px;
+    height: 48px;
     border-radius: 3px;
 }
 
-.store-nav-items {
-    display: flex;
-    list-style: none;
-    padding: 0 16px;
-}
-
-.store-nav-item {
-    padding: 10px 15px;
-    color: #c6d4df;
-    text-decoration: none;
-    font-size: 13px;
-    cursor: pointer;
-}
-
-.store-nav-item:hover {
+.user-info h3 {
     color: #ffffff;
-    background: linear-gradient(90deg, #06bfff 0%, #2d73ff 100%);
+    font-size: 14px;
+    margin-bottom: 4px;
+    font-weight: normal;
 }
 
-/* Game grid */
+.user-stats {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.stat-item {
+    background: rgba(0, 0, 0, 0.3);
+    color: #8f98a0;
+    padding: 2px 6px;
+    border-radius: 2px;
+    font-size: 10px;
+}
+
+/* Games grid */
 .games-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 16px;
-    margin-top: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(292px, 1fr));
+    gap: 14px;
 }
 
 .game-capsule {
-    background: linear-gradient(to right, #23262e, #2a2e37);
-    border-radius: 3px;
+    background: linear-gradient(to right, rgba(35, 38, 46, 0.9), rgba(42, 71, 94, 0.9));
+    border-radius: 4px;
     overflow: hidden;
-    transition: transform 0.2s ease-in-out;
     cursor: pointer;
+    transition: transform 0.1s ease;
+    position: relative;
 }
 
 .game-capsule:hover {
-    transform: scale(1.03);
+    transform: scale(1.02);
+    box-shadow: 0 0 12px rgba(0, 0, 0, 0.7);
 }
 
 .game-header {
     position: relative;
-    padding-top: 56.25%; /* 16:9 aspect ratio */
+    overflow: hidden;
 }
 
 .game-header img {
-    position: absolute;
-    top: 0;
-    left: 0;
     width: 100%;
-    height: 100%;
-    object-fit: cover;
+    height: auto;
+    display: block;
 }
 
 .game-info {
-    padding: 12px;
+    padding: 8px;
 }
 
 .game-title {
-    color: #fff;
-    font-size: 14px;
-    margin-bottom: 4px;
+    color: #ffffff;
+    font-size: 12px;
+    margin-bottom: 2px;
+    line-height: 14px;
+    font-weight: normal;
 }
 
 .game-price {
     color: #acdbf5;
-    font-size: 13px;
+    font-size: 11px;
+    font-weight: bold;
 }
 
-/* Loading state */
-.loading {
+/* Loading */
+.loading-section {
+    display: none;
     text-align: center;
-    padding: 40px;
+    padding: 32px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
 }
 
 .steam-spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid #1b2838;
-    border-top: 3px solid #66c0f4;
+    width: 24px;
+    height: 24px;
+    border: 2px solid rgba(102, 192, 244, 0.3);
+    border-top: 2px solid #66c0f4;
     border-radius: 50%;
     animation: spin 1s linear infinite;
-    margin: 0 auto;
+    margin: 0 auto 12px;
 }
 
 @keyframes spin {
@@ -313,78 +330,75 @@ body {
     100% { transform: rotate(360deg); }
 }
 
-/* Sections */
-.recommendation-section {
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 3px;
-    padding: 24px;
-    margin-bottom: 20px;
-    width: 100%;
-}
-
-.section-header {
-    color: #fff;
-    font-size: 18px;
-    margin-bottom: 24px;
-    font-weight: normal;
-    width: 100%;
-}
-
-/* User profile */
-.user-profile {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    background: rgba(0, 0, 0, 0.2);
-    padding: 16px;
-    border-radius: 3px;
-    margin-bottom: 20px;
-}
-
-.user-avatar {
-    width: 64px;
-    height: 64px;
-    border-radius: 3px;
-}
-
-.user-info h3 {
-    color: #ffffff;
-    font-size: 16px;
-    margin-bottom: 4px;
-}
-
-.user-stats {
-    display: flex;
-    gap: 12px;
-}
-
-.stat-item {
-    background: rgba(0, 0, 0, 0.2);
-    padding: 4px 8px;
-    border-radius: 2px;
+.loading-text {
+    color: #8f98a0;
     font-size: 12px;
-    color: #66c0f4;
 }
 
 /* Messages */
-.error-message {
-    color: #ff7373;
-    text-align: center;
-    padding: 20px;
-    background: rgba(255, 0, 0, 0.1);
+.message {
+    padding: 8px 12px;
     border-radius: 3px;
-    margin: 20px 0;
-    font-size: 14px;
+    margin: 12px 0;
+    font-size: 11px;
+    display: none;
 }
 
-/* Responsive design */
+.error-message {
+    background: rgba(165, 55, 55, 0.2);
+    border: 1px solid #a53737;
+    color: #ff6b6b;
+}
+
+.success-message {
+    background: rgba(75, 107, 34, 0.2);
+    border: 1px solid #4b6b22;
+    color: #beee11;
+}
+
+/* Results section */
+.results-section {
+    display: none;
+}
+
+.back-button {
+    background: linear-gradient(to right, #4c6b22 5%, #87b145 95%);
+    border: none;
+    border-radius: 2px;
+    color: white;
+    padding: 6px 12px;
+    font-size: 10px;
+    cursor: pointer;
+    text-transform: uppercase;
+    text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.3);
+    margin: 16px auto;
+    display: block;
+    font-family: "Motiva Sans", Arial, Helvetica, sans-serif;
+    letter-spacing: 0.5px;
+}
+
+.back-button:hover {
+    background: linear-gradient(to right, #87b145 5%, #4c6b22 95%);
+}
+
+/* Responsive */
 @media (max-width: 768px) {
-    .steam-input-group {
-        flex-direction: column;
+    .main-container {
+        padding: 0 8px;
     }
     
-    .steam-button {
-        width: 100%;
+    .steamforge-logo {
+        font-size: 40px;
+        letter-spacing: 2px;
+    }
+    
+    .logo-separator {
+        width: 150px;
+    }
+    
+    .search-form {
+        flex-direction: column;
+        max-width: none;
     }
     
     .user-profile {
@@ -392,18 +406,29 @@ body {
         text-align: center;
     }
     
-    .user-stats {
-        justify-content: center;
-    }
-    
     .games-grid {
         grid-template-columns: 1fr;
     }
 }
 
+@media (max-width: 480px) {
+    .steamforge-logo {
+        font-size: 32px;
+        letter-spacing: 1px;
+    }
+    
+    .logo-separator {
+        width: 120px;
+    }
+    
+    .welcome-section {
+        padding: 24px 16px;
+    }
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-    width: 12px;
+    width: 10px;
 }
 
 ::-webkit-scrollbar-track {
@@ -412,9 +437,9 @@ body {
 
 ::-webkit-scrollbar-thumb {
     background: #4c6b22;
-    border-radius: 6px;
+    border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
     background: #66c0f4;
-} 
+}

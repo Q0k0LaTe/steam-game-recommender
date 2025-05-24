@@ -3,69 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Get personalized Steam game recommendations based on your gaming profile">
-    <title>Steam Game Recommender</title>
+    <meta name="description" content="Discover your next favorite game with personalized recommendations">
+    <title>SteamForge</title>
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-    <header class="steam-header">
-        <nav class="steam-nav">
-            <div class="steam-logo">STEAM</div>
-            <div class="nav-links">
-                <a href="#" class="nav-item active">GAME RECOMMENDER</a>
-                <a href="#" class="nav-item">STORE</a>
-                <a href="#" class="nav-item">COMMUNITY</a>
-                <a href="#" class="nav-item">ABOUT</a>
+    <div class="main-container">
+        <!-- SteamForge Header -->
+        <header class="steamforge-header">
+            <div class="logo-container">
+                <h1 class="steamforge-logo">
+                    <span class="logo-steam">Steam</span><span class="logo-forge">Forge</span>
+                </h1>
+                <div class="logo-separator"></div>
+                <p class="steamforge-tagline">Game Discovery Engine</p>
             </div>
-        </nav>
-    </header>
+        </header>
 
-    <main class="main-content">
-        <!-- Initial Input Section -->
-        <section class="recommendation-section welcome-section">
-            <div class="welcome-content">
-                <h1>Find Your Next Game</h1>
-                <p class="welcome-text">Get personalized recommendations based on your Steam profile</p>
-                
-                <form id="searchForm" class="steam-input-group">
-                    <input type="text" 
-                           class="steam-input" 
-                           id="steamId" 
-                           placeholder="Steam ID, Profile URL, or Custom URL" 
-                           aria-label="Steam ID or Profile URL"
-                           required>
-                    <button type="submit" class="steam-button">Get Recommendations</button>
-                </form>
-                
-                <div class="input-help">
-                    Examples: 76561198037867621, steamcommunity.com/id/username, or just 'username'<br>
-                    Note: Your Steam profile must be public to fetch game data
-                </div>
+        <!-- Welcome Section -->
+        <div class="welcome-section" id="welcomeSection">
+            <h2 class="welcome-title">Discover Your Next Favorite Game</h2>
+            <p class="welcome-subtitle">
+                Get personalized game recommendations based on your Steam profile and gaming preferences
+            </p>
+            
+            <form id="searchForm" class="search-form">
+                <input 
+                    type="text" 
+                    class="search-input" 
+                    id="steamId" 
+                    placeholder="Steam ID, Profile URL, or Username" 
+                    required
+                >
+                <button type="submit" class="search-button">Get Recommendations</button>
+            </form>
+            
+            <div class="input-help">
+                Examples: 76561198037867621, steamcommunity.com/id/username, or username<br>
+                Your Steam profile must be public to fetch game data
             </div>
-        </section>
+        </div>
 
-        <!-- Dynamic Content (Hidden by Default) -->
-        <div class="dynamic-content" style="display: none;">
-            <div id="errorMessage" class="error-message" role="alert" aria-live="polite"></div>
-            <div id="successMessage" class="success-message" role="status" aria-live="polite"></div>
+        <!-- Messages -->
+        <div id="errorMessage" class="message error-message"></div>
+        <div id="successMessage" class="message success-message"></div>
 
-            <div id="loading" class="loading" aria-hidden="true">
-                <div class="steam-spinner" role="progressbar"></div>
-                <p>Fetching Steam profile and analyzing your games...</p>
-            </div>
+        <!-- Loading Section -->
+        <div id="loadingSection" class="loading-section">
+            <div class="steam-spinner"></div>
+            <p class="loading-text">Analyzing your Steam profile...</p>
+        </div>
 
-            <section id="results" class="results-section" aria-live="polite">
-                <div id="userProfile"></div>
+        <!-- Results Section -->
+        <div id="resultsSection" class="results-section">
+            <!-- User Profile -->
+            <div id="userProfile"></div>
 
-                <div class="recommendation-section">
-                    <h2 class="section-header">Recommended For You</h2>
+            <!-- Recommended Games -->
+            <div class="content-section">
+                <div class="section-header">Recommended For You</div>
+                <div class="section-content">
                     <div id="gamesGrid" class="games-grid"></div>
                 </div>
-                
-                <button type="button" class="steam-button secondary" onclick="clearResults()">Start Over</button>
-            </section>
+            </div>
+            
+            <button type="button" class="back-button" onclick="resetApp()">
+                New Search
+            </button>
         </div>
-    </main>
+    </div>
 
     <script src="/script.js"></script>
 </body>
