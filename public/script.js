@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Display recommendations
-            displayRecommendations(recommendationsData);
+            displayRecommendations(recommendationsData.recommendations || recommendationsData);
 
             // Show results
             loadingSection.style.display = 'none';
@@ -72,13 +72,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayRecommendations(recommendations) {
+        if (!Array.isArray(recommendations)) {
+            console.error('Recommendations is not an array:', recommendations);
+            gamesGrid.innerHTML = '<p class="error-message">No recommendations available</p>';
+            return;
+        }
+
+        if (recommendations.length === 0) {
+            gamesGrid.innerHTML = '<p class="error-message">No games found to recommend</p>';
+            return;
+        }
+
         const html = recommendations.map(game => `
             <div class="game-capsule" onclick="window.open('https://store.steampowered.com/app/${game.appid}', '_blank')">
                 <div class="game-header">
-                    <img src="${game.header_image}" alt="${game.name}">
+                    <img src="${game.header_image || ''}" alt="${game.name || 'Game image'}" 
+                         onerror="this.src='https://steamstore-a.akamaihd.net/public/images/v6/app_image_capsule.png'">
                 </div>
                 <div class="game-info">
-                    <div class="game-title">${game.name}</div>
+                    <div class="game-title">${game.name || 'Unknown Game'}</div>
                     <div class="game-price">${formatPrice(game.price_overview)}</div>
                 </div>
             </div>
