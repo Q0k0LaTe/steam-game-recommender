@@ -274,31 +274,44 @@ class SteamService {
                 }
             }
 
-            // Extract total achievements
-            let totalAchievements = 0;
-            const achievementSelectors = [
-                '.profile_achievements .profile_count_link_total',
-                '.achievement_showcase .showcase_stat',
-                '.profile_item_links a[href*="achievements"] .profile_count_link_total'
+            // Extract member since date (when user joined Steam)
+            let memberSince = '';
+            let joinYear = null;
+            
+            // Try to get member since from various locations
+            const memberSinceSelectors = [
+                '.profile_summary .profile_summary_item:contains("Member since")',
+                '.profile_header_summary:contains("Member since")',
+                '.profile_item_links .profile_count_link:contains("Member since")'
             ];
 
-            for (const selector of achievementSelectors) {
-                const achievementText = $(selector).text().trim();
-                const achievementMatch = achievementText.match(/(\d+)/);
-                if (achievementMatch) {
-                    totalAchievements = parseInt(achievementMatch[1]);
-                    console.log(`Found achievements: ${totalAchievements} using selector: ${selector}`);
+            for (const selector of memberSinceSelectors) {
+                const memberText = $(selector).text();
+                if (memberText.includes('Member since')) {
+                    memberSince = memberText.replace('Member since', '').trim();
+                    console.log(`Found member since: ${memberSince}`);
                     break;
                 }
             }
 
-            // Extract perfect games (games with 100% achievements)
-            let perfectGames = 0;
-            const perfectGamesText = $('.profile_perfect_games .profile_count_link_total').text();
-            if (perfectGamesText) {
-                const perfectMatch = perfectGamesText.match(/(\d+)/);
-                if (perfectMatch) {
-                    perfectGames = parseInt(perfectMatch[1]);
+            // Try to extract from years of service badge
+            if (!memberSince) {
+                const serviceText = $('.badge_description').text();
+                const yearsMatch = serviceText.match(/(\d+)\s+years?\s+of\s+service/i);
+                if (yearsMatch) {
+                    const yearsOfService = parseInt(yearsMatch[1]);
+                    const currentYear = new Date().getFullYear();
+                    joinYear = currentYear - yearsOfService;
+                    memberSince = joinYear.toString();
+                    console.log(`Calculated member since from years of service: ${memberSince}`);
+                }
+            }
+
+            // Try to extract year from member since text
+            if (memberSince && !joinYear) {
+                const yearMatch = memberSince.match(/(\d{4})/);
+                if (yearMatch) {
+                    joinYear = parseInt(yearMatch[1]);
                 }
             }
 
@@ -312,7 +325,7 @@ class SteamService {
                 }
             }
 
-            // Extract years of service
+            // Extract years of service for additional info
             let yearsOfService = 0;
             const serviceText = $('.badge_description').text();
             const yearsMatch = serviceText.match(/(\d+)\s+years?/i);
@@ -320,12 +333,12 @@ class SteamService {
                 yearsOfService = parseInt(yearsMatch[1]);
             }
 
-            console.log(`Profile stats - Level: ${level}, Achievements: ${totalAchievements}, Perfect Games: ${perfectGames}, Badges: ${badges}`);
+            console.log(`Profile stats - Level: ${level}, Member Since: ${memberSince}, Join Year: ${joinYear}, Badges: ${badges}`);
 
             return {
                 level: level,
-                totalAchievements: totalAchievements,
-                perfectGames: perfectGames,
+                memberSince: memberSince,
+                joinYear: joinYear,
                 badges: badges,
                 yearsOfService: yearsOfService
             };
@@ -333,8 +346,8 @@ class SteamService {
             console.error('Error fetching profile stats:', error.message);
             return {
                 level: 0,
-                totalAchievements: 0,
-                perfectGames: 0,
+                memberSince: '',
+                joinYear: null,
                 badges: 0,
                 yearsOfService: 0
             };
